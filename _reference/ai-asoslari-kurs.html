@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sun'iy Intellekt Asoslari — 16 Darslik Kurs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1d1d1f;
+    --sub:#86868b;
+    --paper:#ffffff;
+    --mist:#fbfbfd;
+    --line:#e8e8ed;
+    --card-bg:#ffffff;
+    --blue:#4285F4;
+    --red:#EA4335;
+    --yellow:#F9AB00;
+    --green:#34A853;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,sans-serif;
+    --maxw:1120px;
+    --ease:cubic-bezier(.22,.61,.36,1);
+    color-scheme:light;
+  }
+  [data-theme="dark"]{
+    --ink:#f5f5f7;
+    --sub:#98989d;
+    --paper:#000000;
+    --mist:#111113;
+    --line:#2a2a2d;
+    --card-bg:#0c0c0e;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--font);background:var(--paper);color:var(--ink);
+    line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+    transition:background .35s var(--ease),color .35s var(--ease);
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--blue);color:#fff}
+
+  /* ---------- NAV ---------- */
+  header.nav{
+    position:sticky;top:0;z-index:60;
+    background:var(--nav-bg,rgba(255,255,255,.72));
+    backdrop-filter:saturate(180%) blur(20px);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid transparent;transition:border-color .3s,background .3s;
+  }
+  header.nav.scrolled{border-bottom-color:var(--line);background:var(--nav-bg-scrolled,rgba(255,255,255,.85))}
+  [data-theme="dark"] header.nav{--nav-bg:rgba(0,0,0,.6);--nav-bg-scrolled:rgba(0,0,0,.78)}
+  .theme-toggle{
+    width:34px;height:34px;border-radius:50%;border:1px solid var(--line);
+    background:var(--mist);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;transition:transform .3s var(--ease),background .2s;
+  }
+  .theme-toggle:hover{transform:scale(1.08)}
+  .theme-toggle svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .theme-toggle .moon{display:none}
+  [data-theme="dark"] .theme-toggle .sun{display:none}
+  [data-theme="dark"] .theme-toggle .moon{display:block}
+  .nav-inner{max-width:var(--maxw);margin:0 auto;height:52px;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between}
+  .brand{font-weight:600;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+  .brand .g{display:inline-flex;gap:3px}
+  .brand .g i{width:7px;height:7px;border-radius:50%;display:block}
+  .brand .g i:nth-child(1){background:var(--blue)}
+  .brand .g i:nth-child(2){background:var(--red)}
+  .brand .g i:nth-child(3){background:var(--yellow)}
+  .brand .g i:nth-child(4){background:var(--green)}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{font-size:13px;color:var(--sub);transition:color .2s}
+  .nav-links a:hover,.nav-links a:focus-visible{color:var(--ink)}
+  .nav-cta{font-size:13px;font-weight:500;background:var(--blue);color:#fff;
+    padding:7px 15px;border-radius:980px;transition:transform .2s var(--ease),background .2s}
+  .nav-cta:hover{background:#1a73e8;transform:translateY(-1px)}
+  .burger{display:none;background:none;border:0;cursor:pointer;padding:6px}
+  .burger span{display:block;width:20px;height:1.5px;background:var(--ink);margin:4px 0;transition:.25s}
+
+  /* ---------- HERO ---------- */
+  .hero{max-width:840px;margin:0 auto;padding:96px 22px 60px;text-align:center}
+  .eyebrow{font-size:13px;font-weight:600;color:var(--blue);letter-spacing:0;margin-bottom:18px}
+  .hero h1{font-size:clamp(40px,7vw,76px);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin-bottom:22px}
+  .grad{background:linear-gradient(120deg,var(--blue),var(--green) 55%,var(--yellow));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{font-size:clamp(18px,2.3vw,22px);color:var(--sub);max-width:600px;margin:0 auto 40px;line-height:1.45}
+  .hero .lead b{color:var(--ink);font-weight:600}
+  .stats{display:flex;justify-content:center;gap:0;flex-wrap:wrap;max-width:640px;margin:0 auto}
+  .stat{flex:1;min-width:120px;padding:0 18px;position:relative}
+  .stat+.stat::before{content:"";position:absolute;left:0;top:12%;height:76%;width:1px;background:var(--line)}
+  .stat .num{font-size:clamp(30px,4vw,42px);font-weight:700;letter-spacing:-.03em;line-height:1}
+  .stat .num small{font-size:16px;font-weight:600;color:var(--sub)}
+  .stat .lbl{font-size:12px;color:var(--sub);margin-top:8px}
+
+  /* ---------- MODULE ---------- */
+  .module{padding:78px 0 20px;scroll-margin-top:56px}
+  .module.mist{background:var(--mist)}
+  .m-inner{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  .m-head{text-align:center;max-width:660px;margin:0 auto 44px}
+  .m-icon{width:60px;height:60px;border-radius:17px;display:inline-flex;align-items:center;justify-content:center;
+    background:color-mix(in srgb,var(--accent) 12%,#fff);margin-bottom:20px}
+  .m-icon svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .m-num{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.04em;margin-bottom:8px}
+  .m-title{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.025em;line-height:1.08}
+  .m-range{font-size:14px;color:var(--sub);margin-top:10px}
+
+  .lessons{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  .lessons.solo{grid-template-columns:repeat(2,1fr);max-width:820px;margin:0 auto}
+
+  .card{
+    background:var(--card-bg);border:1px solid var(--line);border-radius:22px;overflow:hidden;
+    opacity:0;transform:translateY(22px) scale(.985);
+    transition:opacity .6s var(--ease),transform .6s var(--ease),box-shadow .35s var(--ease),border-color .35s;
+    box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .card.in{opacity:1;transform:none}
+  .card:hover{box-shadow:0 18px 40px -12px rgba(0,0,0,.14);transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+
+  .vframe{position:relative;aspect-ratio:16/9;background:var(--mist);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;border-bottom:1px solid var(--line)}
+  .vframe::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--accent) 5%,transparent);opacity:0;transition:opacity .3s}
+  .card:hover .vframe::after{opacity:1}
+  .play{width:56px;height:56px;border-radius:50%;background:var(--card-bg);opacity:.95;
+    box-shadow:0 6px 18px -4px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;
+    transition:transform .3s var(--ease);position:relative;z-index:1}
+  .card:hover .play{transform:scale(1.1)}
+  .play svg{width:20px;height:20px;margin-left:3px;fill:var(--accent)}
+  .vf-tag{position:absolute;bottom:12px;left:14px;font-size:11px;font-weight:500;color:var(--sub);
+    background:var(--card-bg);opacity:.85;backdrop-filter:blur(6px);padding:4px 9px;border-radius:8px;z-index:1}
+  .vf-dur{position:absolute;top:12px;right:14px;font-size:11px;font-weight:500;color:var(--sub);
+    background:var(--card-bg);opacity:.85;backdrop-filter:blur(6px);padding:4px 8px;border-radius:8px;z-index:1}
+  /* embed later: replace inner contents of .vframe with an <iframe>/<video> filling 100% */
+
+  .c-body{padding:22px 22px 24px}
+  .c-num{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.05em}
+  .c-body h3{font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1.2;margin:6px 0 16px}
+  .rows{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;gap:11px;align-items:baseline}
+  .row .tag{font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+    padding:3px 8px;border-radius:6px;white-space:nowrap;min-width:64px;text-align:center;
+    color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,#fff)}
+  .row .tag.out{background:var(--ink);color:#fff}
+  .row .txt{font-size:13.5px;color:#494950;line-height:1.45}
+
+  /* ---------- WHO FOR ---------- */
+  .whofor{padding:80px 0;text-align:center}
+  .wf-eyebrow{font-size:13px;font-weight:600;color:var(--red);margin-bottom:14px}
+  .whofor h2{font-size:clamp(28px,4vw,42px);font-weight:700;letter-spacing:-.03em;margin-bottom:44px}
+  .wf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:var(--maxw);margin:0 auto;padding:0 22px;text-align:left}
+  .wf-item{border:1px solid var(--line);border-radius:20px;padding:26px 24px;background:var(--card-bg)}
+  .wf-item .wf-ico{font-size:26px;margin-bottom:14px;display:block}
+  .wf-item h4{font-size:16px;font-weight:600;margin-bottom:8px;letter-spacing:-.01em}
+  .wf-item p{font-size:13.5px;color:var(--sub);line-height:1.5}
+
+  /* ---------- INSTRUCTOR ---------- */
+  .instructor{padding:90px 0;background:var(--mist)}
+  .in-wrap{max-width:900px;margin:0 auto;padding:0 22px;display:grid;grid-template-columns:auto 1fr;gap:36px;align-items:center}
+  .in-avatar{width:132px;height:132px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,var(--blue),var(--green) 50%,var(--yellow));
+    display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;color:#fff}
+  .in-eyebrow{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:10px;letter-spacing:.02em}
+  .in-name{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+  .in-role{font-size:14.5px;color:var(--sub);margin-bottom:16px;line-height:1.5}
+  .in-stats{display:flex;gap:26px;flex-wrap:wrap}
+  .in-stat b{display:block;font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .in-stat span{font-size:12px;color:var(--sub)}
+
+  /* ---------- PORTFOLIO ---------- */
+  .portfolio{padding:96px 0;text-align:center;background:var(--mist)}
+  .p-inner{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  .p-eyebrow{font-size:13px;font-weight:600;color:var(--green);margin-bottom:14px}
+  .portfolio h2{font-size:clamp(30px,4.5vw,48px);font-weight:700;letter-spacing:-.03em;line-height:1.06;max-width:720px;margin:0 auto 16px}
+  .portfolio .sub{font-size:18px;color:var(--sub);max-width:560px;margin:0 auto 48px;line-height:1.45}
+  .p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left}
+  .p-item{background:var(--card-bg);border:1px solid var(--line);border-radius:20px;padding:26px 24px;
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+  .p-item:hover{transform:translateY(-4px);box-shadow:0 16px 36px -14px rgba(0,0,0,.14)}
+  .p-dot{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:#fff;margin-bottom:16px}
+  .p-item h4{font-size:17px;font-weight:600;letter-spacing:-.02em;margin-bottom:7px}
+  .p-item p{font-size:13.5px;color:var(--sub);line-height:1.5}
+
+  /* ---------- FAQ ---------- */
+  .faq{padding:90px 0;max-width:760px;margin:0 auto;padding-left:22px;padding-right:22px}
+  .faq-eyebrow{font-size:13px;font-weight:600;color:var(--green);margin-bottom:14px;text-align:center}
+  .faq h2{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.03em;text-align:center;margin-bottom:44px}
+  .faq-item{border-bottom:1px solid var(--line)}
+  .faq-item summary{padding:20px 4px;font-size:16px;font-weight:600;letter-spacing:-.01em;cursor:pointer;
+    list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .faq-item summary::-webkit-details-marker{display:none}
+  .faq-item summary::after{content:"+";font-size:22px;font-weight:400;color:var(--sub);transition:transform .25s var(--ease);flex-shrink:0}
+  .faq-item[open] summary::after{transform:rotate(45deg)}
+  .faq-item p{padding:0 4px 20px;font-size:14.5px;color:var(--sub);line-height:1.55;max-width:640px}
+
+  /* ---------- FINAL CTA ---------- */
+  .final-cta{padding:100px 22px;text-align:center;background:var(--ink);color:var(--paper);border-radius:32px;
+    max-width:var(--maxw);margin:0 auto 90px}
+  [data-theme="dark"] .final-cta{background:var(--card-bg);border:1px solid var(--line)}
+  .final-cta h2{font-size:clamp(30px,5vw,50px);font-weight:700;letter-spacing:-.03em;margin-bottom:16px}
+  .final-cta p{font-size:17px;opacity:.72;max-width:480px;margin:0 auto 32px}
+  .final-cta .btn{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;
+    font-size:15px;font-weight:600;padding:14px 28px;border-radius:980px;transition:transform .2s var(--ease)}
+  .final-cta .btn:hover{transform:translateY(-2px) scale(1.02)}
+
+  /* ---------- FOOTER ---------- */
+  footer{padding:44px 0;border-top:1px solid var(--line)}
+  .f-inner{max-width:var(--maxw);margin:0 auto;padding:0 22px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .f-brand{font-size:17px;font-weight:600;letter-spacing:-.02em}
+  .f-brand span{color:var(--sub);font-weight:400}
+  .f-meta{font-size:13px;color:var(--sub);text-align:right;line-height:1.7}
+  .f-meta a{color:var(--blue)}
+  .f-meta a:hover{text-decoration:underline}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media(max-width:800px){
+    .nav-links,.nav-cta{display:none}
+    .burger{display:block}
+    .nav-links.open{display:flex;flex-direction:column;position:absolute;top:52px;left:0;right:0;
+      background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--line);
+      padding:20px 22px;gap:18px}
+    .lessons,.lessons.solo{grid-template-columns:1fr}
+    .p-grid,.wf-grid{grid-template-columns:1fr}
+    .stat+.stat::before{display:none}
+    .in-wrap{grid-template-columns:1fr;text-align:center;justify-items:center}
+    .in-stats{justify-content:center}
+  }
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .card,.p-item{opacity:1;transform:none;transition:box-shadow .2s}
+    .card:hover,.p-item:hover{transform:none}
+    *{transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand"><span class="g"><i></i><i></i><i></i><i></i></span>Tech&nbsp;Jadid</a>
+    <nav class="nav-links" id="menu">
+      <a href="#m1">Poydevor</a>
+      <a href="#m2">Prompt</a>
+      <a href="#m3">Media</a>
+      <a href="#m4">Vibe Coding</a>
+      <a href="#m5">Agentlar</a>
+      <a href="#portfolio">Portfolio</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="theme-toggle" id="themeToggle" aria-label="Rejimni almashtirish">
+        <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+      <a href="#cta" class="nav-cta">Kursga yozilish</a>
+    </div>
+    <button class="burger" id="burger" aria-label="Menyu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="eyebrow">Sun'iy Intellekt Asoslari · 2026</div>
+    <h1>Oddiy foydalanuvchidan —<br><span class="grad">Super darajadagi mutaxassisga.</span></h1>
+    <p class="lead">16 darslik amaliy kurs. Sun'iy intellektni <b>tushuna</b> va <b>super darajada ishlata oladigan</b> mutaxassis bo'lasiz.
+      Kod yozmasdan prompt yozasiz, media generatsiya qilasiz va o'z asbobingizni qurasiz. <b>Har dars ko'rsatsa bo'ladigan natija qoldiradi.</b></p>
+    <div class="stats">
+      <div class="stat"><div class="num">16</div><div class="lbl">Dars</div></div>
+      <div class="stat"><div class="num">120<small> daq</small></div><div class="lbl">Har dars</div></div>
+      <div class="stat"><div class="num">6</div><div class="lbl">Modul</div></div>
+      <div class="stat"><div class="num">6</div><div class="lbl">Artefakt</div></div>
+    </div>
+  </section>
+
+  <!-- WHO FOR -->
+  <section class="whofor">
+    <div class="wf-eyebrow">Kimlar uchun</div>
+    <h2>Darajangiz muhim emas — natija muhim.</h2>
+    <div class="wf-grid">
+      <div class="wf-item"><span class="wf-ico">🎓</span><h4>Talaba</h4><p>Kod bilmasangiz ham muammo emas. AI'ni ishlatishni, prompt yozishni va birinchi mahsulotingizni qurishni o'rganasiz.</p></div>
+      <div class="wf-item"><span class="wf-ico">💼</span><h4>Kasb egasi</h4><p>Marketolog, dizayner, o'qituvchi — istalgan sohada AI'ni ish jarayoningizga tatbiq etib, vaqtingizni tejaysiz.</p></div>
+      <div class="wf-item"><span class="wf-ico">🚀</span><h4>Tadbirkor</h4><p>Vibe coding va AI bot orqali o'z mini-mahsulotingizni kod yozmasdan qurib, sinab ko'rasiz.</p></div>
+    </div>
+  </section>
+
+  <!-- MODULE 1 · blue -->
+  <section class="module" id="m1" style="--accent:var(--blue)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 6V3M15 6V3M9 21v-3M15 21v-3M6 9H3M6 15H3M21 9h-3M21 15h-3"/></svg></div>
+        <div class="m-num">MODUL 01</div>
+        <h2 class="m-title">AI Poydevori</h2>
+        <div class="m-range">Darslar 1–3 · Model qanday ishlaydi va qaysi birini tanlash</div>
+      </div>
+      <div class="lessons">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 01 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">01</div><h3>Sun'iy intellekt nima?</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">AI / ML / Deep Learning / Generative AI farqi. Nega aynan hozir portladi.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">3 vazifa ChatGPT'da: yozish, tahlil, g'oya. Kuchli/zaif tomonlar.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">"AI mumkin / mumkin emas" ro'yxati.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 02 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">02</div><h3>LLM ichida nima bor?</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Token, kontekst oynasi, bashorat. Gallyutsinatsiya sababi. Temperature.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Promptni past/yuqori temperature'da solishtirish. Xatoni aniqlash.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">"Ishonish mumkin/mumkin emas" tahlili.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 03 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">03</div><h3>Modellar dunyosi va model tanlash</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">ChatGPT vs Claude vs Gemini. Reasoning modellari. Bepul vs pullik.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Bitta vazifani 3 modelda ishlatib benchmark qilish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">"Qaysi ish uchun qaysi model" qo'llanmasi.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 2 · red -->
+  <section class="module mist" id="m2" style="--accent:var(--red)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></svg></div>
+        <div class="m-num">MODUL 02</div>
+        <h2 class="m-title">Prompt Engineering</h2>
+        <div class="m-range">Darslar 4–6 · Aniq buyruqdan qayta ishlatiladigan workflow'gacha</div>
+      </div>
+      <div class="lessons">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 04 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">04</div><h3>Prompt Engineering asoslari</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Anatomiya: Rol + Kontekst + Vazifa + Format + Cheklovlar. Zero/few-shot.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Yomon promptni kuchliga aylantirish. Kasbga xos 3 prompt.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">5 tayyor, qayta ishlatiladigan prompt.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 05 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">05</div><h3>Advanced Prompting</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Chain-of-Thought, structured output, system prompt, meta-prompting.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Aniq formatni majburlash. AI'dan o'zingizga prompt yozdirish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Ko'p qadamli 1 "ustoz prompt".</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 06 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">06</div><h3>Prompt'dan shaxsiy workflow'ga</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Prompt kutubxonasi. Bir marta yozib, doim qayta ishlatish.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Kasbi uchun 8–10 promptli kutubxona qurish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Shaxsiy prompt kutubxonasi.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 3 · yellow -->
+  <section class="module" id="m3" style="--accent:var(--yellow)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l4.5-4.5L14 18M14 14l2.5-2.5L20 15"/></svg></div>
+        <div class="m-num">MODUL 03</div>
+        <h2 class="m-title">Media Generatsiya</h2>
+        <div class="m-range">Darslar 7–9 · Rasmdan to'liq video pipeline'gacha</div>
+      </div>
+      <div class="lessons">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 07 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">07</div><h3>Rasm generatsiyasi asoslari</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Diffusion. Midjourney, GPT image, Gemini, Flux, Ideogram. Prompt tuzilishi.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Bir g'oyani turli tool'larda generatsiya va boshqarish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">5 uslubdagi rasmlar to'plami.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 08 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">08</div><h3>Advanced rasm: izchillik, tahrirlash</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Personaj/uslub izchilligi, inpainting, matnli rasm, reference.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Bir personajni bir necha sahnada izchil chiqarish va tahrirlash.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Izchil brend/personaj to'plami.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 09 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">09</div><h3>Video + Ovoz: to'liq pipeline</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Veo, Sora, Kling, Runway. Image-to-video. TTS, Suno, ElevenLabs.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Ssenariy → rasm → video → CapCut. O'zbekcha ovoz alohida dublyaj.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">To'liq yig'ilgan qisqa AI video.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 4 · green -->
+  <section class="module mist" id="m4" style="--accent:var(--green)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/></svg></div>
+        <div class="m-num">MODUL 04</div>
+        <h2 class="m-title">Vibe Coding</h2>
+        <div class="m-range">Darslar 10–12 · Kod yozmasdan real mahsulot qurish</div>
+      </div>
+      <div class="lessons">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 10 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">10</div><h3>Vibe coding nima? Tool'lar</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Kod emas, natijani tasvirlash. Claude, Cursor, Lovable, Bolt, v0.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">G'oyani tasvirlab birinchi sahifa. Xatoni tuzattirish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Ishlaydigan 1-sahifali web sahifa.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 11 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">11</div><h3>Birinchi haqiqiy app + deploy</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">App tuzilishi. So'ra → ko'r → tuzat. Deploy (Vercel).</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Foydali asbob qurish va internetga joylash.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Jonli URL bilan ishlaydigan app.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 12 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">12</div><h3>AI-quvvatli app qurish</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">API kaliti nima. AI'ni app ichiga ulash. "Aqlli" xususiyat.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Appga AI qo'shish: savol-javob bot yoki xulosalovchi.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">AI ishlaydigan real mini-mahsulot.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 5 · blue -->
+  <section class="module" id="m5" style="--accent:var(--blue)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 8V4M12 4h-1.5M12 4h1.5"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M2 12v3M22 12v3"/></svg></div>
+        <div class="m-num">MODUL 05</div>
+        <h2 class="m-title">Agentlar & Avtomatlashtirish</h2>
+        <div class="m-range">Darslar 13–14 · AI'ni asboblarga ulash va bot qurish</div>
+      </div>
+      <div class="lessons solo">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 13 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">13</div><h3>AI agentlar va MCP</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Agent nima. MCP — AI'ni tashqi asboblarga ulash. Xavfsizlik.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Tayyor connector'ni sinash. Ko'p qadamli vazifa.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Avtomatlashtirilgan ko'p qadamli oqim.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 14 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">14</div><h3>Shaxsiy AI yordamchi + Telegram bot</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Kundalik avtomatlashtirish. Nega Telegram eng oson kanal.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Vibe coding bilan AI Telegram bot yasash.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Ishlaydigan shaxsiy Telegram bot.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 6 · red -->
+  <section class="module mist" id="m6" style="--accent:var(--red)">
+    <div class="m-inner">
+      <div class="m-head">
+        <div class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 3c3 1.5 5 5 5 9 0 2-1 4-2 5H9c-1-1-2-3-2-5 0-4 2-7.5 5-9z"/><circle cx="12" cy="10" r="1.6"/><path d="M9 17l-2 4M15 17l2 4"/></svg></div>
+        <div class="m-num">MODUL 06</div>
+        <h2 class="m-title">Tatbiq & Monetizatsiya</h2>
+        <div class="m-range">Darslar 15–16 · Ko'nikmani real daromadga aylantirish</div>
+      </div>
+      <div class="lessons solo">
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 15 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">15</div><h3>AI'ni real kasbga tatbiq etish</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Kasbga xos oqimlar: kontent, marketing, ta'lim, biznes.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Real vazifani to'liq AI oqimiga aylantirish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">Shaxsiy "AI workflow" hujjati.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="vframe"><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div><span class="vf-tag">Dars 16 · Video</span><span class="vf-dur">00:00</span></div>
+          <div class="c-body"><div class="c-num">16</div><h3>Capstone: Portfolio + Monetizatsiya</h3>
+            <div class="rows">
+              <div class="row"><span class="tag">Nazariy</span><span class="txt">Pulga aylantirish: freelance, xizmat, mini-mahsulot, brend.</span></div>
+              <div class="row"><span class="tag">Amaliy</span><span class="txt">Yakuniy loyihani yig'ish va bir sahifada namoyish.</span></div>
+              <div class="row"><span class="tag out">Natija</span><span class="txt">To'liq portfolio + monetizatsiya rejasi.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTRUCTOR -->
+  <section class="instructor">
+    <div class="in-wrap">
+      <div class="in-avatar">AV</div>
+      <div>
+        <div class="in-eyebrow">Kursni kim o'tadi</div>
+        <div class="in-name">Abdulvosit</div>
+        <p class="in-role">AI Engineer & Robototexnika mutaxassisi · Tech Jadid asoschisi.
+          FastAPI, pgvector va LLM asosida real AI mahsulotlar quradi (ChaqimchiAI va boshqalar),
+          shu bilan birga o'zbek tilida amaliy AI ta'limini rivojlantiradi.</p>
+        <div class="in-stats">
+          <div class="in-stat"><b>120+</b><span>Obunachi</span></div>
+          <div class="in-stat"><b>FN4</b><span>Kurs jamoasi</span></div>
+          <div class="in-stat"><b>Najot Ta'lim</b><span>Hamkor</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section class="portfolio" id="portfolio">
+    <div class="p-inner">
+      <div class="p-eyebrow">Kurs oxirida qo'lingizda</div>
+      <h2>"Kurs o'tdim" emas — ko'rsatadigan 6 mahsulot.</h2>
+      <p class="sub">Har modul bitta real artefakt qoldiradi. Kurs tugaganda mijoz yoki ish beruvchiga ko'rsatsa bo'ladigan to'liq portfolio bo'ladi.</p>
+      <div class="p-grid">
+        <div class="p-item"><div class="p-dot" style="background:var(--blue)">01</div><h4>Prompt kutubxonasi</h4><p>Kasbingizga moslangan qayta ishlatiladigan promptlar to'plami.</p></div>
+        <div class="p-item"><div class="p-dot" style="background:var(--red)">02</div><h4>Media to'plami</h4><p>Rasm + video + ovoz — izchil uslubdagi vizual portfolio.</p></div>
+        <div class="p-item"><div class="p-dot" style="background:var(--yellow)">03</div><h4>Vibe-coded app</h4><p>Internetda ishlaydigan, jonli URL bilan real asbob.</p></div>
+        <div class="p-item"><div class="p-dot" style="background:var(--green)">04</div><h4>AI Telegram bot</h4><p>O'zingiz qurgan, ishlaydigan shaxsiy bot.</p></div>
+        <div class="p-item"><div class="p-dot" style="background:var(--blue)">05</div><h4>AI workflow hujjati</h4><p>Kasbiy vazifani to'liq AI oqimiga aylantirilgan reja.</p></div>
+        <div class="p-item"><div class="p-dot" style="background:var(--red)">06</div><h4>Namoyish sahifasi</h4><p>Barcha ishlaringizni jamlagan yakuniy portfolio.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq">
+    <div class="faq-eyebrow">Savollar</div>
+    <h2>Ko'p so'raladigan savollar</h2>
+    <details class="faq-item" open>
+      <summary>Kod yozishni bilishim shartmi?</summary>
+      <p>Yo'q. Kurs "vibe coding" asosida — natijani AI'ga tasvirlab berasiz, kod AI tomonidan yoziladi. Boshlang'ich va tajribali ishtirokchilar bir xil darajada boshlaydi.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Har dars qancha davom etadi?</summary>
+      <p>120 daqiqa — 40 daqiqa nazariy, 55 daqiqa amaliy lab, qolgani yakun va uy vazifasi. Har dars oxirida ko'rsatsa bo'ladigan natija bilan tugaydi.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Qaysi AI tool'lardan foydalanamiz?</summary>
+      <p>ChatGPT, Claude, Gemini, rasm/video generatorlar (Midjourney, Veo, Flux), vibe coding uchun Claude/Cursor/Bolt kabi zamonaviy vositalar. Bepul va pullik variantlar solishtiriladi.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Kurs oxirida nimaga ega bo'laman?</summary>
+      <p>6 ta real artefakt: prompt kutubxonasi, media to'plami, ishlaydigan vibe-coded app, AI Telegram bot, AI workflow hujjati va yakuniy portfolio sahifa.</p>
+    </details>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" id="cta">
+    <h2>Boshlashga tayyormisiz?</h2>
+    <p>Keyingi guruh tez orada boshlanadi. O'rin cheklangan — FN4 jamoasiga qo'shiling.</p>
+    <a href="https://t.me/TechJadid" target="_blank" rel="noopener" class="btn">Telegram orqali yozilish →</a>
+  </section>
+
+</main>
+
+<footer>
+  <div class="f-inner">
+    <div class="f-brand">Tech Jadid <span>/ FN4</span></div>
+    <div class="f-meta">O'zbek tilida amaliy AI ta'limi<br><a href="https://t.me/TechJadid" target="_blank" rel="noopener">t.me/TechJadid</a></div>
+  </div>
+</footer>
+
+<script>
+  // theme: system preference by default, toggle overrides, persisted when possible
+  (function(){
+    var root=document.documentElement,btn;
+    function apply(mode){root.setAttribute('data-theme',mode);}
+    function saved(){ try{return localStorage.getItem('theme');}catch(e){return null;} }
+    function save(mode){ try{localStorage.setItem('theme',mode);}catch(e){} }
+    var mode=saved() || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    apply(mode);
+    document.addEventListener('DOMContentLoaded',function(){
+      btn=document.getElementById('themeToggle');
+      btn.addEventListener('click',function(){
+        var next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+        apply(next);save(next);
+      });
+    });
+  })();
+
+  var nav=document.getElementById('nav');
+  var onScroll=function(){nav.classList.toggle('scrolled',window.scrollY>8)};
+  onScroll();window.addEventListener('scroll',onScroll,{passive:true});
+
+  var burger=document.getElementById('burger'),menu=document.getElementById('menu');
+  burger.addEventListener('click',function(){var o=menu.classList.toggle('open');burger.setAttribute('aria-expanded',o);});
+  menu.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){menu.classList.remove('open');burger.setAttribute('aria-expanded',false);});});
+
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+  document.querySelectorAll('.card').forEach(function(el){io.observe(el);});
+</script>
+</body>
+</html>
