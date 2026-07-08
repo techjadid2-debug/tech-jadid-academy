@@ -58,6 +58,7 @@ export default async function CheckoutPage({
         <form action={completeMockPayment} style={{ marginTop: 20 }}>
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="kind" value={kind} />
+          <input type="hidden" name="provider" value={provider} />
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
             {formatUzs(amount)} — To&apos;lovni tasdiqlash (demo)
           </button>

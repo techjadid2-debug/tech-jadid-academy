@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
-import { getEnrollments } from "@/lib/access";
+import { getEnrollments, isEnrollmentExpired } from "@/lib/access";
 import { getCompleted, percentOf } from "@/lib/progress";
 import { getCourse, allLessons } from "@/lib/course-data";
 import { logout } from "@/app/login/actions";
@@ -24,7 +24,15 @@ export default async function DashboardPage() {
       const lessons = allLessons(course);
       // Keyingi tugallanmagan dars (yo'q bo'lsa — birinchisi)
       const nextLesson = lessons.find((l) => !completed.includes(l.order)) ?? lessons[0];
-      return { enrollment: e, course, pct, completedCount: completed.length, total: lessons.length, nextLesson };
+      return {
+        enrollment: e,
+        course,
+        pct,
+        completedCount: completed.length,
+        total: lessons.length,
+        nextLesson,
+        isExpired: isEnrollmentExpired(e),
+      };
     }),
   );
 
@@ -61,16 +69,18 @@ export default async function DashboardPage() {
           <div className="grid-2">
             {cards.map((c) => {
               if (!c) return null;
-              const { enrollment: e, course, pct, completedCount, total, nextLesson } = c;
+              const { enrollment: e, course, pct, completedCount, total, nextLesson, isExpired } = c;
               return (
                 <div className="panel" key={course.slug}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <span className={`badge ${e.source === "monthly" ? "badge-blue" : "badge-green"}`}>
-                      {e.source === "monthly" ? "Oylik obuna" : "Doimiy kirish"}
+                    <span className={`badge ${isExpired ? "badge-red" : e.source === "monthly" ? "badge-blue" : "badge-green"}`}>
+                      {isExpired ? "Muddati tugagan" : e.source === "monthly" ? "Oylik obuna" : "Doimiy kirish"}
                     </span>
                     {e.expiresAt && (
                       <span className="hint">
-                        {new Date(e.expiresAt).toLocaleDateString("uz-UZ")} gacha
+                        {isExpired ? "tugadi: " : ""}
+                        {new Date(e.expiresAt).toLocaleDateString("uz-UZ")}
+                        {isExpired ? "" : " gacha"}
                       </span>
                     )}
                   </div>
@@ -81,9 +91,15 @@ export default async function DashboardPage() {
                   <div className="progress" style={{ marginBottom: 14 }}>
                     <span style={{ width: `${pct}%` }} />
                   </div>
-                  <Link href={`/learn/${course.slug}/${nextLesson.order}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                    {pct === 0 ? "Boshlash →" : pct === 100 ? "Qayta ko'rish" : "Davom etish →"}
-                  </Link>
+                  {isExpired ? (
+                    <Link href={`/kurs/${course.slug}#narx`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      Obunani uzaytirish →
+                    </Link>
+                  ) : (
+                    <Link href={`/learn/${course.slug}/${nextLesson.order}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      {pct === 0 ? "Boshlash →" : pct === 100 ? "Qayta ko'rish" : "Davom etish →"}
+                    </Link>
+                  )}
                 </div>
               );
             })}

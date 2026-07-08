@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 //   1. current_period_end yaqinlashgan oylik obunalarni topish
 //   2. saqlangan karta token bo'lsa → avtomatik to'lov
 //   3. token yo'q bo'lsa → Telegram/email eslatma + qayta to'lov linki
-//   4. muddati o'tганlarni status=past_due qilish
+//   4. muddati o'tganlarni status=past_due qilish
 //
 // Xavfsizlik: Authorization: Bearer CRON_SECRET tekshiriladi.
 // ============================================================================
@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
-  if (secret && auth !== `Bearer ${secret}`) {
+  if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

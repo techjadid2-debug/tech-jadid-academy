@@ -20,15 +20,15 @@ export async function getEnrollments(userId: string): Promise<Enrollment[]> {
   return all.filter((e) => e.userId === userId);
 }
 
+/** Yozilish muddati o'tganmi (lifetime uchun har doim false). */
+export function isEnrollmentExpired(enrollment: Pick<Enrollment, "expiresAt">): boolean {
+  return enrollment.expiresAt !== null && new Date(enrollment.expiresAt).getTime() <= Date.now();
+}
+
 /** Foydalanuvchining kursga amaldagi kirish huquqi bormi. */
 export async function hasAccess(userId: string, courseSlug: string): Promise<boolean> {
   const list = await getEnrollments(userId);
-  const now = Date.now();
-  return list.some(
-    (e) =>
-      e.courseSlug === courseSlug &&
-      (e.expiresAt === null || new Date(e.expiresAt).getTime() > now),
-  );
+  return list.some((e) => e.courseSlug === courseSlug && !isEnrollmentExpired(e));
 }
 
 /** To'lov/berish natijasida kirishni ochadi (Server Action / webhook ichida). */
@@ -54,10 +54,11 @@ export async function grantAccess(
 async function getDbEnrollments(userId: string): Promise<Enrollment[]> {
   const admin = createSupabaseAdmin();
   if (!admin) return [];
-  const { data } = await admin
+  const { data, error } = await admin
     .from("enrollments")
     .select("source, expires_at, courses!inner(slug)")
     .eq("user_id", userId);
+  if (error) console.error("[access] getDbEnrollments failed", error);
   if (!data) return [];
   return data.map((r) => {
     const course = r.courses as unknown as { slug: string };
@@ -80,12 +81,16 @@ async function grantDbAccess(
   if (!admin) return;
   const courseId = await getCourseId(courseSlug);
   if (!courseId) return;
-  await admin
+  const { error } = await admin
     .from("enrollments")
     .upsert(
       { user_id: userId, course_id: courseId, source, expires_at: expiresAt },
       { onConflict: "user_id,course_id" },
     );
+  if (error) {
+    console.error("[access] grantDbAccess failed", error);
+    throw new Error("Kirish huquqini berishda xatolik yuz berdi.");
+  }
 }
 
 // ---- DEMO rejim (cookie) -------------------------------------------------

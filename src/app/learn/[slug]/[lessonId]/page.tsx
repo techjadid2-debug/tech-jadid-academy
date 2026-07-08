@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { getCourse, getLesson, allLessons } from "@/lib/course-data";
 import { getCurrentUser } from "@/lib/auth";
@@ -65,7 +66,12 @@ export default async function LearnPage({
         )}
         {done && pct === 100 && (
           <div className="panel" style={{ marginBottom: 20, background: "color-mix(in srgb, var(--green) 12%, var(--card-bg))" }}>
-            <b>🏆 Kursni tamomladingiz!</b> Barcha 16 dars yakunlandi. Endi portfolioingizni yig&apos;ing.
+            <b>🏆 Kursni tamomladingiz!</b> Barcha {lessons.length} dars yakunlandi. Endi portfolioingizni yig&apos;ing.
+          </div>
+        )}
+        {done && pct < 100 && (
+          <div className="panel" style={{ marginBottom: 20, background: "color-mix(in srgb, var(--green) 10%, var(--card-bg))" }}>
+            <b>✓ Dars belgilandi.</b> Hali {lessons.length - completed.length} dars qoldi — kabinetdan davom eting.
           </div>
         )}
 
@@ -130,10 +136,20 @@ export default async function LearnPage({
               {/* Oldingi / keyingi */}
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 28 }}>
                 {prev ? (
-                  <Link href={`/learn/${slug}/${prev.order}`} className="btn btn-ghost">← Oldingi</Link>
+                  <Link
+                    href={access || prev.isPreview ? `/learn/${slug}/${prev.order}` : `/kurs/${slug}#narx`}
+                    className="btn btn-ghost"
+                  >
+                    ← Oldingi
+                  </Link>
                 ) : <span />}
                 {next ? (
-                  <Link href={`/learn/${slug}/${next.order}`} className="btn btn-ghost">Keyingi →</Link>
+                  <Link
+                    href={access || next.isPreview ? `/learn/${slug}/${next.order}` : `/kurs/${slug}#narx`}
+                    className="btn btn-ghost"
+                  >
+                    Keyingi →
+                  </Link>
                 ) : <span />}
               </div>
             </div>
@@ -177,6 +193,7 @@ export default async function LearnPage({
           </aside>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

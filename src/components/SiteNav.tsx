@@ -62,6 +62,9 @@ export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/#narx", label: 
               {l.label}
             </Link>
           ))}
+          <Link href={cta.href} className="nav-cta-mobile" onClick={() => setMenuOpen(false)}>
+            {cta.label}
+          </Link>
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>

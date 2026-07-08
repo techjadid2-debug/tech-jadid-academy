@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { AI_FOUNDATIONS, formatUzs } from "@/lib/course-data";
 
@@ -17,6 +18,7 @@ export default async function AdminPage() {
           <p className="page-sub">Bu sahifa faqat administratorlar uchun.</p>
           <Link href="/dashboard" className="btn btn-primary">Kabinetga qaytish</Link>
         </main>
+        <SiteFooter />
       </>
     );
   }
@@ -78,6 +80,7 @@ export default async function AdminPage() {
           ))}
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

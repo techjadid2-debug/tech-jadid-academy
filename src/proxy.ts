@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // ============================================================================
 // Proxy (Next.js 16 — avvalgi "middleware"). Har so'rovda Supabase sessiya
-// tokenini yangilaydi va cookie'ларни javobga yozadi.
+// tokenini yangilaydi va cookie'larni javobga yozadi.
 // Supabase ulanmagan bo'lsa (DEMO rejim) — hech narsa qilmaydi (passthrough).
 // ============================================================================
 export async function proxy(request: NextRequest) {

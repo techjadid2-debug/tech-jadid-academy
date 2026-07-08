@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Reveal } from "@/components/Reveal";

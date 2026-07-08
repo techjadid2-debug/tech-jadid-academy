@@ -64,18 +64,20 @@ async function ensureProfile(id: string, email: string): Promise<ProfileRow> {
   const fallbackRole = email === ADMIN_EMAIL ? "admin" : "student";
   if (!admin) return { full_name: null, phone: null, role: fallbackRole };
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .select("full_name, phone, role")
     .eq("id", id)
     .maybeSingle();
+  if (error) console.error("[auth] profile lookup failed", error);
   if (data) return data as ProfileRow;
 
-  const { data: created } = await admin
+  const { data: created, error: insertError } = await admin
     .from("profiles")
     .insert({ id, role: fallbackRole })
     .select("full_name, phone, role")
     .maybeSingle();
+  if (insertError) console.error("[auth] profile creation failed", insertError);
   return (created as ProfileRow) ?? { full_name: null, phone: null, role: fallbackRole };
 }
 

@@ -43,7 +43,7 @@ export function LessonCard({ lesson, href, reveal, unlocked }: LessonCardProps) 
           </span>
         )}
         <span className="vf-tag">Dars {pad(lesson.order)} · Video</span>
-        <span className="vf-dur">{formatDur(lesson.durationSec)}</span>
+        {lesson.durationSec > 0 && <span className="vf-dur">{formatDur(lesson.durationSec)}</span>}
       </div>
       <div className="c-body">
         <div className="c-num">{pad(lesson.order)}</div>
@@ -60,7 +60,7 @@ export function LessonCard({ lesson, href, reveal, unlocked }: LessonCardProps) 
     </>
   );
 
-  const className = `card${reveal ? " reveal" : ""}`;
+  const className = `card${reveal ? " reveal" : ""}${href ? "" : " is-static"}`;
 
   if (href) {
     return (

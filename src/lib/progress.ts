@@ -58,12 +58,13 @@ export function percentOf(course: Course, completed: number[]): number {
 async function getDbCompleted(userId: string, slug: string): Promise<number[]> {
   const admin = createSupabaseAdmin();
   if (!admin) return [];
-  const { data } = await admin
+  const { data, error } = await admin
     .from("lesson_progress")
     .select("lessons!inner(order, modules!inner(courses!inner(slug)))")
     .eq("user_id", userId)
     .eq("completed", true)
     .eq("lessons.modules.courses.slug", slug);
+  if (error) console.error("[progress] getDbCompleted failed", error);
   if (!data) return [];
   return data
     .map((r) => (r.lessons as unknown as { order: number }).order)
@@ -80,10 +81,11 @@ async function setDbCompleted(
   if (!admin) return;
   const lessonId = await getLessonId(slug, order);
   if (!lessonId) return;
-  await admin.from("lesson_progress").upsert(
+  const { error } = await admin.from("lesson_progress").upsert(
     { user_id: userId, lesson_id: lessonId, completed: done, updated_at: new Date().toISOString() },
     { onConflict: "user_id,lesson_id" },
   );
+  if (error) console.error("[progress] setDbCompleted failed", error);
 }
 
 // ---- DEMO rejim (cookie) -------------------------------------------------

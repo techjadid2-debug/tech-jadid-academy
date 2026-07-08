@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 import { demoLogin, sendOtp, verifyOtp } from "./actions";
@@ -33,6 +34,7 @@ export default async function LoginPage({
           )}
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }
@@ -68,9 +70,9 @@ function RealAuth({
         <div className="divider" style={{ flex: 1, margin: 0 }} />
       </div>
 
-      {error === "send" && (
+      {(error === "send" || error === "email") && (
         <p className="hint" style={{ color: "var(--danger, #d33)", marginBottom: 12 }}>
-          Kod yuborishда xatolik. Emailни tekshirib qayta urinib ko&apos;ring.
+          Kod yuborishda xatolik. Emailni tekshirib qayta urinib ko&apos;ring.
         </p>
       )}
       {error === "code" && (
@@ -99,13 +101,15 @@ function RealAuth({
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
             Tasdiqlash
           </button>
-          <form action={sendOtp} style={{ marginTop: 10 }}>
-            <input type="hidden" name="next" value={next} />
-            <input type="hidden" name="email" value={email} />
-            <button type="submit" className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
-              Kodni qayta yuborish
-            </button>
-          </form>
+          <button
+            type="submit"
+            formAction={sendOtp}
+            formNoValidate
+            className="btn btn-ghost"
+            style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+          >
+            Kodni qayta yuborish
+          </button>
         </form>
       ) : (
         <form action={sendOtp}>
