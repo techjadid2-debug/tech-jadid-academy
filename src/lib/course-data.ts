@@ -15,15 +15,15 @@ export const AI_FOUNDATIONS: Course = {
   pricing: [
     {
       kind: "lifetime",
-      label: "Doimiy kirish",
-      priceUzs: 1_490_000,
-      note: "Bir marta to'lang — barcha darslar va yangilanishlar umrbod sizniki.",
+      label: "Bir martalik to'lov",
+      priceUzs: 350_000,
+      note: "Bitta to'lov — darhol barcha 16 darsga umrbod kirish.",
     },
     {
-      kind: "monthly",
-      label: "Oylik obuna",
-      priceUzs: 199_000,
-      note: "Oyma-oy to'lang, istalgan vaqt bekor qiling.",
+      kind: "installment2",
+      label: "2 bo'lib to'lash",
+      priceUzs: 225_000,
+      note: "Hozir 225 000 so'm (1–8-darslar ochiladi), keyin yana 225 000 so'm (jami 450 000) — qolgan darslar ochiladi.",
     },
   ],
   modules: [
@@ -42,6 +42,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/01",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "AI / ML / Deep Learning / Generative AI farqi. Nega aynan hozir portladi." },
             { kind: "Amaliy", text: "3 vazifa ChatGPT'da: yozish, tahlil, g'oya. Kuchli/zaif tomonlar." },
@@ -55,6 +56,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/02",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Token, kontekst oynasi, bashorat. Gallyutsinatsiya sababi. Temperature." },
             { kind: "Amaliy", text: "Promptni past/yuqori temperature'da solishtirish. Xatoni aniqlash." },
@@ -68,6 +70,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/03",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "ChatGPT vs Claude vs Gemini. Reasoning modellari. Bepul vs pullik." },
             { kind: "Amaliy", text: "Bitta vazifani 3 modelda ishlatib benchmark qilish." },
@@ -91,6 +94,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/04",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Anatomiya: Rol + Kontekst + Vazifa + Format + Cheklovlar. Zero/few-shot." },
             { kind: "Amaliy", text: "Yomon promptni kuchliga aylantirish. Kasbga xos 3 prompt." },
@@ -104,6 +108,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/05",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Chain-of-Thought, structured output, system prompt, meta-prompting." },
             { kind: "Amaliy", text: "Aniq formatni majburlash. AI'dan o'zingizga prompt yozdirish." },
@@ -117,6 +122,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/06",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Prompt kutubxonasi. Bir marta yozib, doim qayta ishlatish." },
             { kind: "Amaliy", text: "Kasbi uchun 8–10 promptli kutubxona qurish." },
@@ -140,6 +146,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/07",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Diffusion. Midjourney, GPT image, Gemini, Flux, Ideogram. Prompt tuzilishi." },
             { kind: "Amaliy", text: "Bir g'oyani turli tool'larda generatsiya va boshqarish." },
@@ -153,6 +160,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/08",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Personaj/uslub izchilligi, inpainting, matnli rasm, reference." },
             { kind: "Amaliy", text: "Bir personajni bir necha sahnada izchil chiqarish va tahrirlash." },
@@ -166,6 +174,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/09",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Veo, Sora, Kling, Runway. Image-to-video. TTS, Suno, ElevenLabs." },
             { kind: "Amaliy", text: "Ssenariy → rasm → video → CapCut. O'zbekcha ovoz alohida dublyaj." },
@@ -189,6 +198,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/10",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Kod emas, natijani tasvirlash. Claude, Cursor, Lovable, Bolt, v0." },
             { kind: "Amaliy", text: "G'oyani tasvirlab birinchi sahifa. Xatoni tuzattirish." },
@@ -202,6 +212,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/11",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "App tuzilishi. So'ra → ko'r → tuzat. Deploy (Vercel)." },
             { kind: "Amaliy", text: "Foydali asbob qurish va internetga joylash." },
@@ -215,6 +226,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/12",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "API kaliti nima. AI'ni app ichiga ulash. \"Aqlli\" xususiyat." },
             { kind: "Amaliy", text: "Appga AI qo'shish: savol-javob bot yoki xulosalovchi." },
@@ -238,6 +250,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/13",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Agent nima. MCP — AI'ni tashqi asboblarga ulash. Xavfsizlik." },
             { kind: "Amaliy", text: "Tayyor connector'ni sinash. Ko'p qadamli vazifa." },
@@ -251,6 +264,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/14",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: true,
           rows: [
             { kind: "Nazariy", text: "Kundalik avtomatlashtirish. Nega Telegram eng oson kanal." },
             { kind: "Amaliy", text: "Vibe coding bilan AI Telegram bot yasash." },
@@ -274,6 +288,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/15",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Kasbga xos oqimlar: kontent, marketing, ta'lim, biznes." },
             { kind: "Amaliy", text: "Real vazifani to'liq AI oqimiga aylantirish." },
@@ -287,6 +302,7 @@ export const AI_FOUNDATIONS: Course = {
           videoKey: "ai-asoslari/16",
           youtubeId: null,
           durationSec: 0,
+          sandboxEnabled: false,
           rows: [
             { kind: "Nazariy", text: "Pulga aylantirish: freelance, xizmat, mini-mahsulot, brend." },
             { kind: "Amaliy", text: "Yakuniy loyihani yig'ish va bir sahifada namoyish." },

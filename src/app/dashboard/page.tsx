@@ -5,7 +5,8 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { getEnrollments, isEnrollmentExpired } from "@/lib/access";
 import { getCompleted, percentOf } from "@/lib/progress";
-import { getCourse, allLessons } from "@/lib/course-data";
+import { allLessons } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 import { logout } from "@/app/login/actions";
 
 export default async function DashboardPage() {
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
   // Har kurs uchun kurs + progress foizini oldindan hisoblaymiz.
   const cards = await Promise.all(
     enrollments.map(async (e) => {
-      const course = getCourse(e.courseSlug);
+      const course = await getCourseAsync(e.courseSlug);
       if (!course) return null;
       const completed = await getCompleted(user.id, e.courseSlug);
       const pct = percentOf(course, completed);
@@ -70,11 +71,20 @@ export default async function DashboardPage() {
             {cards.map((c) => {
               if (!c) return null;
               const { enrollment: e, course, pct, completedCount, total, nextLesson, isExpired } = c;
+              const isPartial = !isExpired && e.unlockedThrough !== null;
               return (
                 <div className="panel" key={course.slug}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <span className={`badge ${isExpired ? "badge-red" : e.source === "monthly" ? "badge-blue" : "badge-green"}`}>
-                      {isExpired ? "Muddati tugagan" : e.source === "monthly" ? "Oylik obuna" : "Doimiy kirish"}
+                    <span
+                      className={`badge ${isExpired ? "badge-red" : isPartial ? "badge-blue" : e.source === "monthly" ? "badge-blue" : "badge-green"}`}
+                    >
+                      {isExpired
+                        ? "Muddati tugagan"
+                        : isPartial
+                          ? `1–${e.unlockedThrough}-darslar ochiq`
+                          : e.source === "monthly"
+                            ? "Oylik obuna"
+                            : "Doimiy kirish"}
                     </span>
                     {e.expiresAt && (
                       <span className="hint">
@@ -98,6 +108,15 @@ export default async function DashboardPage() {
                   ) : (
                     <Link href={`/learn/${course.slug}/${nextLesson.order}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
                       {pct === 0 ? "Boshlash →" : pct === 100 ? "Qayta ko'rish" : "Davom etish →"}
+                    </Link>
+                  )}
+                  {isPartial && (
+                    <Link
+                      href={`/kurs/${course.slug}#narx`}
+                      className="btn btn-ghost"
+                      style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                    >
+                      Qolgan darslarni ochish →
                     </Link>
                   )}
                 </div>

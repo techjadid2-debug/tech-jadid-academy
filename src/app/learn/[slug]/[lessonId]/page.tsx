@@ -3,9 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { getCourse, getLesson, allLessons } from "@/lib/course-data";
+import { getLesson, allLessons } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
-import { hasAccess } from "@/lib/access";
+import { getActiveEnrollment } from "@/lib/access";
 import { getCompleted, percentOf } from "@/lib/progress";
 import { signVideoUrl, watermarkText } from "@/lib/video";
 import { completeAndNext, unmarkComplete } from "@/app/learn/actions";
@@ -20,7 +21,7 @@ export default async function LearnPage({
   const { slug, lessonId } = await params;
   const { welcome, done } = await searchParams;
 
-  const course = getCourse(slug);
+  const course = await getCourseAsync(slug);
   if (!course) notFound();
 
   const order = Number(lessonId);
@@ -29,7 +30,10 @@ export default async function LearnPage({
   const { lesson } = found;
 
   const user = await getCurrentUser();
-  const access = user ? await hasAccess(user.id, slug) : false;
+  const enrollment = user ? await getActiveEnrollment(user.id, slug) : null;
+  const hasLessonAccess = (o: number) =>
+    enrollment !== null && (enrollment.unlockedThrough === null || o <= enrollment.unlockedThrough);
+  const access = hasLessonAccess(order);
 
   // Preview bo'lmagan darsni ko'rish uchun kirish shart.
   if (!lesson.isPreview && !user) {
@@ -137,7 +141,7 @@ export default async function LearnPage({
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 28 }}>
                 {prev ? (
                   <Link
-                    href={access || prev.isPreview ? `/learn/${slug}/${prev.order}` : `/kurs/${slug}#narx`}
+                    href={hasLessonAccess(prev.order) || prev.isPreview ? `/learn/${slug}/${prev.order}` : `/kurs/${slug}#narx`}
                     className="btn btn-ghost"
                   >
                     ← Oldingi
@@ -145,7 +149,7 @@ export default async function LearnPage({
                 ) : <span />}
                 {next ? (
                   <Link
-                    href={access || next.isPreview ? `/learn/${slug}/${next.order}` : `/kurs/${slug}#narx`}
+                    href={hasLessonAccess(next.order) || next.isPreview ? `/learn/${slug}/${next.order}` : `/kurs/${slug}#narx`}
                     className="btn btn-ghost"
                   >
                     Keyingi →
@@ -168,7 +172,8 @@ export default async function LearnPage({
               <div className="lesson-list">
                 {lessons.map((l) => {
                   const isActive = l.order === lesson.order;
-                  const openable = access || l.isPreview;
+                  const lessonAccess = hasLessonAccess(l.order);
+                  const openable = lessonAccess || l.isPreview;
                   const lDone = completed.includes(l.order);
                   return (
                     <Link
@@ -182,7 +187,7 @@ export default async function LearnPage({
                       <span className="li-title">{l.title}</span>
                       {l.isPreview ? (
                         <span className="li-lock" style={{ color: "var(--green)" }}>bepul</span>
-                      ) : access ? null : (
+                      ) : lessonAccess ? null : (
                         <span className="li-lock">🔒</span>
                       )}
                     </Link>

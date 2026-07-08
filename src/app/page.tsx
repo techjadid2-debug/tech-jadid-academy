@@ -5,6 +5,7 @@ import { Reveal } from "@/components/Reveal";
 import { ModuleIcon } from "@/components/course/ModuleIcon";
 import { LessonCard } from "@/components/course/LessonCard";
 import { AI_FOUNDATIONS, formatUzs } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 
 const WHO_FOR = [
   { ico: "🎓", h: "Talaba", p: "Kod bilmasangiz ham muammo emas. AI'ni ishlatishni, prompt yozishni va birinchi mahsulotingizni qurishni o'rganasiz." },
@@ -28,8 +29,8 @@ const FAQ = [
   { q: "Kurs oxirida nimaga ega bo'laman?", a: "6 ta real artefakt: prompt kutubxonasi, media to'plami, ishlaydigan vibe-coded app, AI Telegram bot, AI workflow hujjati va yakuniy portfolio sahifa." },
 ];
 
-export default function LandingPage() {
-  const course = AI_FOUNDATIONS;
+export default async function LandingPage() {
+  const course = (await getCourseAsync(AI_FOUNDATIONS.slug)) ?? AI_FOUNDATIONS;
 
   return (
     <>

@@ -20,6 +20,8 @@ export interface CheckoutRequest {
   courseSlug: string;
   kind: PricingKind;
   amountUzs: number;
+  /** "2 bo'lib to'lash"ning qaysi bosqichi ("1" — birinchi, "2" — qolganini ochish) */
+  step?: "1" | "2";
 }
 
 export interface CheckoutResult {
@@ -63,6 +65,7 @@ export function createCheckout(req: CheckoutRequest): CheckoutResult {
     kind: req.kind,
     amount: String(req.amountUzs),
     order: orderId,
+    ...(req.step ? { step: req.step } : {}),
   });
   return {
     redirectUrl: `/checkout?${params.toString()}`,

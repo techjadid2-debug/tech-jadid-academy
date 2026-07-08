@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getCourse } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 import { createCheckout } from "@/lib/payments";
 import type { PaymentProvider, PricingKind } from "@/lib/types";
 
@@ -14,8 +14,9 @@ export async function startCheckout(formData: FormData) {
   const slug = String(formData.get("slug") ?? "");
   const kind = String(formData.get("kind") ?? "lifetime") as PricingKind;
   const provider = String(formData.get("provider") ?? "payme") as PaymentProvider;
+  const step = formData.get("step") === "2" ? "2" : "1";
 
-  const course = getCourse(slug);
+  const course = await getCourseAsync(slug);
   if (!course) redirect("/");
 
   const user = await getCurrentUser();
@@ -31,6 +32,7 @@ export async function startCheckout(formData: FormData) {
     courseSlug: slug,
     kind: option.kind,
     amountUzs: option.priceUzs,
+    step,
   });
 
   redirect(checkout.redirectUrl);

@@ -95,7 +95,8 @@ export function PurchasePanel({ course, defaultPlan }: { course: Course; default
       </form>
 
       <p className="hint" style={{ marginTop: 12, textAlign: "center" }}>
-        🔒 To&apos;lov xavfsiz. Doimiy kirish — umrbod, oylik — istalgan vaqt bekor qilinadi.
+        🔒 To&apos;lov xavfsiz. Bir martalik — umrbod kirish. 2 bo&apos;lib to&apos;lashda birinchi
+        to&apos;lovda 1–8-darslar, ikkinchi to&apos;lovdan keyin barcha darslar ochiladi.
       </p>
     </div>
   );

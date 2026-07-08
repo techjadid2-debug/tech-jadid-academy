@@ -5,9 +5,11 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { ModuleIcon } from "@/components/course/ModuleIcon";
 import { LessonCard } from "@/components/course/LessonCard";
 import { PurchasePanel } from "@/components/course/PurchasePanel";
-import { getCourse, allLessons } from "@/lib/course-data";
+import { allLessons, formatUzs } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
-import { hasAccess } from "@/lib/access";
+import { getActiveEnrollment } from "@/lib/access";
+import { startCheckout } from "./actions";
 import type { PricingKind } from "@/lib/types";
 
 export default async function CoursePage({
@@ -20,13 +22,18 @@ export default async function CoursePage({
   const { slug } = await params;
   const { plan } = await searchParams;
 
-  const course = getCourse(slug);
+  const course = await getCourseAsync(slug);
   if (!course) notFound();
 
   const user = await getCurrentUser();
-  const unlocked = user ? await hasAccess(user.id, slug) : false;
+  const enrollment = user ? await getActiveEnrollment(user.id, slug) : null;
+  const unlocked = enrollment !== null;
+  const unlockedThrough = enrollment?.unlockedThrough ?? null;
+  const isPartial = unlocked && unlockedThrough !== null;
+  const canOpenLesson = (order: number, isPreview: boolean) =>
+    isPreview || (unlocked && (unlockedThrough === null || order <= unlockedThrough));
   const firstLesson = allLessons(course)[0];
-  const defaultPlan: PricingKind = plan === "monthly" ? "monthly" : "lifetime";
+  const defaultPlan: PricingKind = plan === "installment2" ? "installment2" : "lifetime";
 
   return (
     <>
@@ -41,7 +48,8 @@ export default async function CoursePage({
             <span className="badge badge-blue">16 dars</span>
             <span className="badge badge-gray">6 modul</span>
             <span className="badge badge-gray">120 daq / dars</span>
-            {unlocked && <span className="badge badge-green">✓ Sizda ochiq</span>}
+            {unlocked && !isPartial && <span className="badge badge-green">✓ Sizda ochiq</span>}
+            {isPartial && <span className="badge badge-blue">1–{unlockedThrough}-darslar ochiq</span>}
           </div>
         </div>
 
@@ -62,12 +70,12 @@ export default async function CoursePage({
                 </div>
                 <div className={`lessons${m.lessons.length === 2 ? " solo" : ""}`}>
                   {m.lessons.map((l) => {
-                    const canOpen = unlocked || l.isPreview;
+                    const canOpen = canOpenLesson(l.order, l.isPreview);
                     return (
                       <LessonCard
                         key={l.order}
                         lesson={l}
-                        unlocked={unlocked}
+                        unlocked={canOpen}
                         href={canOpen ? `/learn/${course.slug}/${l.order}` : undefined}
                       />
                     );
@@ -77,9 +85,37 @@ export default async function CoursePage({
             ))}
           </div>
 
-          {/* O'ng: sotib olish yoki davom ettirish */}
+          {/* O'ng: sotib olish, qolganini ochish, yoki davom ettirish */}
           <aside>
-            {unlocked ? (
+            {isPartial ? (
+              <div className="panel" style={{ position: "sticky", top: 72 }} id="narx">
+                <span className="badge badge-blue" style={{ marginBottom: 12 }}>Qisman ochiq</span>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>
+                  1–{unlockedThrough}-darslar ochiq
+                </div>
+                <p className="hint" style={{ marginBottom: 18 }}>
+                  Qolgan darslarni ochish uchun ikkinchi to&apos;lovni ({formatUzs(
+                    course.pricing.find((p) => p.kind === "installment2")?.priceUzs ?? 0,
+                  )}) amalga oshiring.
+                </p>
+                <form action={startCheckout}>
+                  <input type="hidden" name="slug" value={course.slug} />
+                  <input type="hidden" name="kind" value="installment2" />
+                  <input type="hidden" name="provider" value="payme" />
+                  <input type="hidden" name="step" value="2" />
+                  <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                    Qolganini ochish →
+                  </button>
+                </form>
+                <Link
+                  href={`/learn/${course.slug}/${firstLesson.order}`}
+                  className="btn btn-ghost"
+                  style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                >
+                  Ochiq darslarni ko&apos;rish
+                </Link>
+              </div>
+            ) : unlocked ? (
               <div className="panel" style={{ position: "sticky", top: 72 }}>
                 <span className="badge badge-green" style={{ marginBottom: 12 }}>✓ Kirish ochiq</span>
                 <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursingiz tayyor</div>

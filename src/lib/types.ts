@@ -22,6 +22,8 @@ export interface Lesson {
   youtubeId: string | null;
   durationSec: number;
   rows: LessonRow[];
+  /** "Sinab ko'ring" AI maydoni shu darsda ko'rsatiladimi (admin CMS orqali boshqariladi) */
+  sandboxEnabled: boolean;
 }
 
 export interface Module {
@@ -34,7 +36,7 @@ export interface Module {
   lessons: Lesson[];
 }
 
-export type PricingKind = "lifetime" | "monthly";
+export type PricingKind = "lifetime" | "monthly" | "installment2";
 
 export interface PricingOption {
   kind: PricingKind;
@@ -54,14 +56,16 @@ export interface Course {
 
 // ---- Foydalanuvchi / kirish ----
 
-export type EnrollmentSource = "lifetime" | "monthly" | "admin";
+export type EnrollmentSource = "lifetime" | "monthly" | "installment2" | "admin";
 
 export interface Enrollment {
   userId: string;
   courseSlug: string;
   source: EnrollmentSource;
-  /** Oylik obuna uchun tugash sanasi; lifetime uchun null */
+  /** Oylik obuna uchun tugash sanasi; lifetime/installment uchun null */
   expiresAt: string | null;
+  /** "2 bo'lib to'lash"da 1-to'lovdan keyin ochilgan oxirgi dars tartibi; null = cheklovsiz (to'liq kirish) */
+  unlockedThrough: number | null;
 }
 
 export type PaymentProvider = "payme" | "click" | "uzum";

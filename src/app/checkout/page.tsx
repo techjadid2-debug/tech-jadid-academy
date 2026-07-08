@@ -1,20 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
-import { getCourse, formatUzs } from "@/lib/course-data";
+import { formatUzs } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
 import { PROVIDER_LABELS } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/types";
 import { completeMockPayment } from "./actions";
 
+const PLAN_LABELS: Record<string, string> = {
+  monthly: "Oylik obuna",
+  installment2: "2 bo'lib to'lash",
+  lifetime: "Bir martalik to'lov",
+};
+
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ provider?: string; slug?: string; kind?: string; amount?: string; order?: string }>;
+  searchParams: Promise<{ provider?: string; slug?: string; kind?: string; amount?: string; order?: string; step?: string }>;
 }) {
   const sp = await searchParams;
   const slug = sp.slug ?? "";
-  const course = getCourse(slug);
+  const course = await getCourseAsync(slug);
   if (!course) redirect("/");
 
   const user = await getCurrentUser();
@@ -22,7 +29,9 @@ export default async function CheckoutPage({
 
   const provider = (sp.provider ?? "payme") as PaymentProvider;
   const amount = Number(sp.amount ?? 0);
-  const kind = sp.kind === "monthly" ? "monthly" : "lifetime";
+  const kind = sp.kind && sp.kind in PLAN_LABELS ? sp.kind : "lifetime";
+  const step = sp.step === "2" ? "2" : "1";
+  const planLabel = kind === "installment2" ? `${PLAN_LABELS[kind]} (${step === "2" ? "2-qism" : "1-qism"})` : PLAN_LABELS[kind];
 
   return (
     <>
@@ -35,7 +44,7 @@ export default async function CheckoutPage({
         <div className="panel">
           <Row label="Kurs" value={course.title} />
           <div className="divider" />
-          <Row label="Tarif" value={kind === "monthly" ? "Oylik obuna" : "Doimiy kirish"} />
+          <Row label="Tarif" value={planLabel} />
           <div className="divider" />
           <Row label="To'lov usuli" value={PROVIDER_LABELS[provider]} />
           <div className="divider" />
@@ -59,6 +68,7 @@ export default async function CheckoutPage({
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="kind" value={kind} />
           <input type="hidden" name="provider" value={provider} />
+          <input type="hidden" name="step" value={step} />
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
             {formatUzs(amount)} — To&apos;lovni tasdiqlash (demo)
           </button>

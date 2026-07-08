@@ -14,6 +14,9 @@ import { getCourseId } from "@/lib/supabase/db";
 
 const ENROLL_COOKIE = "tj_enroll";
 
+/** "2 bo'lib to'lash"da 1-to'lovdan keyin ochiladigan oxirgi dars tartibi. */
+export const INSTALLMENT_FIRST_UNLOCK = 8;
+
 export async function getEnrollments(userId: string): Promise<Enrollment[]> {
   if (isSupabaseConfigured) return getDbEnrollments(userId);
   const all = await readCookieEnrollments();
@@ -25,10 +28,26 @@ export function isEnrollmentExpired(enrollment: Pick<Enrollment, "expiresAt">): 
   return enrollment.expiresAt !== null && new Date(enrollment.expiresAt).getTime() <= Date.now();
 }
 
-/** Foydalanuvchining kursga amaldagi kirish huquqi bormi. */
-export async function hasAccess(userId: string, courseSlug: string): Promise<boolean> {
+/** Foydalanuvchining kursga amaldagi (muddati o'tmagan) yozilishi — bo'lsa qaytaradi. */
+export async function getActiveEnrollment(userId: string, courseSlug: string): Promise<Enrollment | null> {
   const list = await getEnrollments(userId);
-  return list.some((e) => e.courseSlug === courseSlug && !isEnrollmentExpired(e));
+  return list.find((e) => e.courseSlug === courseSlug && !isEnrollmentExpired(e)) ?? null;
+}
+
+/** Foydalanuvchining kursga (hech bo'lmasa qisman) amaldagi kirish huquqi bormi. */
+export async function hasAccess(userId: string, courseSlug: string): Promise<boolean> {
+  return (await getActiveEnrollment(userId, courseSlug)) !== null;
+}
+
+/** Muayyan darsga kirish huquqi bormi (unlockedThrough cheklovini hisobga oladi). */
+export async function canAccessLesson(
+  userId: string,
+  courseSlug: string,
+  lessonOrder: number,
+): Promise<boolean> {
+  const enrollment = await getActiveEnrollment(userId, courseSlug);
+  if (!enrollment) return false;
+  return enrollment.unlockedThrough === null || lessonOrder <= enrollment.unlockedThrough;
 }
 
 /** To'lov/berish natijasida kirishni ochadi (Server Action / webhook ichida). */
@@ -41,12 +60,22 @@ export async function grantAccess(
     source === "monthly"
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       : null;
+  const unlockedThrough = source === "installment2" ? INSTALLMENT_FIRST_UNLOCK : null;
 
   if (isSupabaseConfigured) {
-    await grantDbAccess(userId, courseSlug, source, expiresAt);
+    await grantDbAccess(userId, courseSlug, source, expiresAt, unlockedThrough);
     return;
   }
-  await grantCookieAccess(userId, courseSlug, source, expiresAt);
+  await grantCookieAccess(userId, courseSlug, source, expiresAt, unlockedThrough);
+}
+
+/** "2 bo'lib to'lash"ning 2-to'lovi — mavjud yozilishni to'liq (cheklovsiz) kirishga ochadi. */
+export async function unlockFullAccess(userId: string, courseSlug: string): Promise<void> {
+  if (isSupabaseConfigured) {
+    await unlockFullAccessDb(userId, courseSlug);
+    return;
+  }
+  await unlockFullAccessCookie(userId, courseSlug);
 }
 
 // ---- REAL rejim (Supabase) ----------------------------------------------
@@ -56,7 +85,7 @@ async function getDbEnrollments(userId: string): Promise<Enrollment[]> {
   if (!admin) return [];
   const { data, error } = await admin
     .from("enrollments")
-    .select("source, expires_at, courses!inner(slug)")
+    .select("source, expires_at, unlocked_through, courses!inner(slug)")
     .eq("user_id", userId);
   if (error) console.error("[access] getDbEnrollments failed", error);
   if (!data) return [];
@@ -67,6 +96,7 @@ async function getDbEnrollments(userId: string): Promise<Enrollment[]> {
       courseSlug: course.slug,
       source: r.source as EnrollmentSource,
       expiresAt: (r.expires_at as string | null) ?? null,
+      unlockedThrough: (r.unlocked_through as number | null) ?? null,
     };
   });
 }
@@ -76,6 +106,7 @@ async function grantDbAccess(
   courseSlug: string,
   source: EnrollmentSource,
   expiresAt: string | null,
+  unlockedThrough: number | null,
 ): Promise<void> {
   const admin = createSupabaseAdmin();
   if (!admin) return;
@@ -84,12 +115,28 @@ async function grantDbAccess(
   const { error } = await admin
     .from("enrollments")
     .upsert(
-      { user_id: userId, course_id: courseId, source, expires_at: expiresAt },
+      { user_id: userId, course_id: courseId, source, expires_at: expiresAt, unlocked_through: unlockedThrough },
       { onConflict: "user_id,course_id" },
     );
   if (error) {
     console.error("[access] grantDbAccess failed", error);
     throw new Error("Kirish huquqini berishda xatolik yuz berdi.");
+  }
+}
+
+async function unlockFullAccessDb(userId: string, courseSlug: string): Promise<void> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return;
+  const courseId = await getCourseId(courseSlug);
+  if (!courseId) return;
+  const { error } = await admin
+    .from("enrollments")
+    .update({ unlocked_through: null })
+    .eq("user_id", userId)
+    .eq("course_id", courseId);
+  if (error) {
+    console.error("[access] unlockFullAccessDb failed", error);
+    throw new Error("To'liq kirishni ochishda xatolik yuz berdi.");
   }
 }
 
@@ -111,13 +158,28 @@ async function grantCookieAccess(
   courseSlug: string,
   source: EnrollmentSource,
   expiresAt: string | null,
+  unlockedThrough: number | null,
 ): Promise<void> {
   const store = await cookies();
   const all = await readCookieEnrollments();
   // Bir kursga bitta faol yozuv — eskisini almashtiramiz.
   const filtered = all.filter((e) => !(e.userId === userId && e.courseSlug === courseSlug));
-  filtered.push({ userId, courseSlug, source, expiresAt });
+  filtered.push({ userId, courseSlug, source, expiresAt, unlockedThrough });
   store.set(ENROLL_COOKIE, JSON.stringify(filtered), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+async function unlockFullAccessCookie(userId: string, courseSlug: string): Promise<void> {
+  const store = await cookies();
+  const all = await readCookieEnrollments();
+  const updated = all.map((e) =>
+    e.userId === userId && e.courseSlug === courseSlug ? { ...e, unlockedThrough: null } : e,
+  );
+  store.set(ENROLL_COOKIE, JSON.stringify(updated), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

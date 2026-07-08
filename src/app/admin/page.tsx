@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AI_FOUNDATIONS, formatUzs } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -23,7 +25,7 @@ export default async function AdminPage() {
     );
   }
 
-  const course = AI_FOUNDATIONS;
+  const course = (await getCourseAsync(AI_FOUNDATIONS.slug)) ?? notFound();
   const lessonCount = course.modules.reduce((n, m) => n + m.lessons.length, 0);
 
   return (

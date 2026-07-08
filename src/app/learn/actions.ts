@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { hasAccess } from "@/lib/access";
+import { canAccessLesson } from "@/lib/access";
 import { setCompleted } from "@/lib/progress";
-import { getCourse, getLesson, allLessons } from "@/lib/course-data";
+import { getLesson, allLessons } from "@/lib/course-data";
+import { getCourseAsync } from "@/lib/course";
 
 /** Darsni yakunlangan deb belgilaydi va keyingi darsga (yoki kabinetga) o'tadi. */
 export async function completeAndNext(formData: FormData) {
@@ -14,11 +15,11 @@ export async function completeAndNext(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/learn/${slug}/${order}`)}`);
 
-  const course = getCourse(slug);
+  const course = await getCourseAsync(slug);
   if (!course || !getLesson(course, order)) redirect("/");
 
-  // Faqat kirish huquqi bo'lsa progress yoziladi.
-  if (await hasAccess(user.id, slug)) {
+  // Faqat shu darsga (dars darajasida) kirish huquqi bo'lsa progress yoziladi.
+  if (await canAccessLesson(user.id, slug, order)) {
     await setCompleted(user.id, slug, order, true);
   }
 
