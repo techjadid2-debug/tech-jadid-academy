@@ -4,6 +4,7 @@ import type { Enrollment, EnrollmentSource } from "./types";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
+import { isLessonCleared } from "@/lib/lesson-assessments";
 
 // ============================================================================
 // Kirish nazorati (enrollment) — dual-mode.
@@ -47,7 +48,10 @@ export async function canAccessLesson(
 ): Promise<boolean> {
   const enrollment = await getActiveEnrollment(userId, courseSlug);
   if (!enrollment) return false;
-  return enrollment.unlockedThrough === null || lessonOrder <= enrollment.unlockedThrough;
+  if (enrollment.unlockedThrough !== null && lessonOrder > enrollment.unlockedThrough) return false;
+  // 1-darsdan keyin faqat avvalgi dars testi 90% bilan yopilganda (yoki ustoz
+  // ruxsat berganda) davom etiladi. Bu jonli guruhdagi nazorat oqimini saqlaydi.
+  return lessonOrder <= 1 || isLessonCleared(userId, courseSlug, lessonOrder - 1);
 }
 
 /** To'lov/berish natijasida kirishni ochadi (Server Action / webhook ichida). */
@@ -76,6 +80,33 @@ export async function unlockFullAccess(userId: string, courseSlug: string): Prom
     return;
   }
   await unlockFullAccessCookie(userId, courseSlug);
+}
+
+/**
+ * To'lov qaytarilganda (refund/cancel) kirishni qaytarib oladi — faqat real
+ * rejim (webhook konteksti). "2 bo'lib to'lash"ning 2-to'lovi qaytarilsa,
+ * yozilish o'chirilmaydi — qisman kirishga (1–8) qaytariladi.
+ */
+export async function revokeAccessForRefund(
+  userId: string,
+  courseSlug: string,
+  opts: { relockOnly: boolean },
+): Promise<void> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return;
+  const courseId = await getCourseId(courseSlug);
+  if (!courseId) return;
+
+  const query = opts.relockOnly
+    ? admin
+        .from("enrollments")
+        .update({ unlocked_through: INSTALLMENT_FIRST_UNLOCK })
+        .eq("user_id", userId)
+        .eq("course_id", courseId)
+    : admin.from("enrollments").delete().eq("user_id", userId).eq("course_id", courseId);
+
+  const { error } = await query;
+  if (error) console.error("[access] revokeAccessForRefund failed", error);
 }
 
 // ---- REAL rejim (Supabase) ----------------------------------------------

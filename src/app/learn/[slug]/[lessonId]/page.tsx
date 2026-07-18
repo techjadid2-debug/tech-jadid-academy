@@ -2,13 +2,18 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
-import { VideoPlayer } from "@/components/VideoPlayer";
 import { getLesson, allLessons } from "@/lib/course-data";
+import type { LessonContentBlock } from "@/lib/types";
 import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
-import { getActiveEnrollment } from "@/lib/access";
+import { canAccessLesson, getActiveEnrollment } from "@/lib/access";
+import { getRequestStatus } from "@/lib/enrollment-requests";
 import { getCompleted, percentOf } from "@/lib/progress";
-import { signVideoUrl, watermarkText } from "@/lib/video";
+import { LessonSlides } from "@/components/lesson/LessonSlides";
+import { LessonAssessment } from "@/components/lesson/LessonAssessment";
+import { HomeworkPanel } from "@/components/lesson/HomeworkPanel";
+import { getAssessmentForLesson, getAssessmentStatus } from "@/lib/lesson-assessments";
+import { getSubmission } from "@/lib/homework";
 import { completeAndNext, unmarkComplete } from "@/app/learn/actions";
 
 export default async function LearnPage({
@@ -30,10 +35,9 @@ export default async function LearnPage({
   const { lesson } = found;
 
   const user = await getCurrentUser();
-  const enrollment = user ? await getActiveEnrollment(user.id, slug) : null;
-  const hasLessonAccess = (o: number) =>
-    enrollment !== null && (enrollment.unlockedThrough === null || o <= enrollment.unlockedThrough);
-  const access = hasLessonAccess(order);
+  const lessons = allLessons(course);
+  const access = user ? await canAccessLesson(user.id, slug, order) : false;
+  const accessibleOrders = new Set(user ? await Promise.all(lessons.map(async (item) => (await canAccessLesson(user.id, slug, item.order)) ? item.order : 0)) : []);
 
   // Preview bo'lmagan darsni ko'rish uchun kirish shart.
   if (!lesson.isPreview && !user) {
@@ -41,13 +45,7 @@ export default async function LearnPage({
   }
 
   const locked = !access && !lesson.isPreview;
-  const canWatch = access || lesson.isPreview;
-
-  // Video imzosi faqat huquq tasdiqlangach beriladi.
-  const signed = canWatch && user ? signVideoUrl(lesson.videoKey, user.id) : { url: null, expiresAt: 0 };
-  const wm = user ? watermarkText(user) : "Mehmon · preview";
-
-  const lessons = allLessons(course);
+  const lockReason = locked && user ? await getLockReason(user.id, slug, order) : null;
   const completed = user ? await getCompleted(user.id, slug) : [];
   const isDone = completed.includes(order);
   const pct = percentOf(course, completed);
@@ -55,6 +53,13 @@ export default async function LearnPage({
   const idx = lessons.findIndex((l) => l.order === order);
   const prev = lessons[idx - 1];
   const next = lessons[idx + 1];
+
+  const assessment = access && user ? await getAssessmentForLesson(slug, order) : [];
+  const assessmentStatus = access && user ? await getAssessmentStatus(user.id, slug, order) : null;
+  const taskBlock = lesson.content?.find(
+    (b): b is Extract<LessonContentBlock, { type: "task" }> => b.type === "task",
+  );
+  const submission = access && user && taskBlock ? await getSubmission(user.id, slug, order) : null;
 
   return (
     <>
@@ -80,16 +85,9 @@ export default async function LearnPage({
         )}
 
         <div className="learn-grid">
-          {/* Chap: player + tavsif */}
+          {/* Chap: dars kontenti */}
           <div>
-            <VideoPlayer
-              signedUrl={signed.url}
-              youtubeId={lesson.isPreview ? lesson.youtubeId : null}
-              watermark={wm}
-              locked={locked}
-            />
-
-            <div style={{ marginTop: 22 }}>
+            <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                 <span className="page-eyebrow" style={{ margin: 0 }}>Dars {String(lesson.order).padStart(2, "0")}</span>
                 {isDone && <span className="badge badge-green">✓ Yakunlangan</span>}
@@ -106,18 +104,34 @@ export default async function LearnPage({
                 ))}
               </div>
 
+              {(access || lesson.isPreview) && <LessonSlides lesson={lesson} />}
+
               {locked ? (
                 <div className="panel" style={{ marginTop: 24 }}>
                   <b>Bu dars qulflangan.</b>
                   <p className="hint" style={{ margin: "8px 0 14px" }}>
-                    To&apos;liq kursni ochish uchun sotib oling yoki oylik obuna bo&apos;ling.
+                    {lockReason === "pending"
+                      ? "Arizangiz ustoz tomonidan ko'rib chiqilmoqda. Tasdiqlangach dars ochiladi."
+                      : lockReason === "rejected"
+                        ? "Arizangiz hozircha tasdiqlanmadi. Qayta murojaat qiling."
+                        : lockReason === "sequential"
+                          ? "Bu darsga o'tish uchun avvalgi darsning 10 savolli testini kamida 9/10 bilan yakunlang."
+                          : lockReason === "partial"
+                            ? "Bu dars qolgan qismga tegishli — ustozga murojaat qiling."
+                            : "Kursga ro'yxatdan o'ting — ustoz tasdiqlagach dars ochiladi."}
                   </p>
                   <Link href={`/kurs/${slug}#narx`} className="btn btn-primary">
-                    Kursni ochish →
+                    {lockReason === "sequential" ? "Testni topshirish →" : "Kurs sahifasiga o'tish →"}
                   </Link>
                 </div>
               ) : (
                 access && (
+                  <>
+                  {assessmentStatus && <LessonAssessment
+                    slug={slug} order={order}
+                    questions={assessment.map(({ id, prompt, options }) => ({ id, prompt, options }))}
+                    status={assessmentStatus}
+                  />}
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 24 }}>
                     <form action={completeAndNext}>
                       <input type="hidden" name="slug" value={slug} />
@@ -134,6 +148,17 @@ export default async function LearnPage({
                       </form>
                     )}
                   </div>
+                  {taskBlock && (
+                    <HomeworkPanel
+                      slug={slug}
+                      order={order}
+                      taskTitle={taskBlock.title}
+                      taskText={taskBlock.text}
+                      checklist={taskBlock.checklist}
+                      submission={submission}
+                    />
+                  )}
+                  </>
                 )
               )}
 
@@ -141,7 +166,7 @@ export default async function LearnPage({
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 28 }}>
                 {prev ? (
                   <Link
-                    href={hasLessonAccess(prev.order) || prev.isPreview ? `/learn/${slug}/${prev.order}` : `/kurs/${slug}#narx`}
+                    href={accessibleOrders.has(prev.order) || prev.isPreview ? `/learn/${slug}/${prev.order}` : `/kurs/${slug}#narx`}
                     className="btn btn-ghost"
                   >
                     ← Oldingi
@@ -149,7 +174,7 @@ export default async function LearnPage({
                 ) : <span />}
                 {next ? (
                   <Link
-                    href={hasLessonAccess(next.order) || next.isPreview ? `/learn/${slug}/${next.order}` : `/kurs/${slug}#narx`}
+                    href={accessibleOrders.has(next.order) || next.isPreview ? `/learn/${slug}/${next.order}` : `/kurs/${slug}#narx`}
                     className="btn btn-ghost"
                   >
                     Keyingi →
@@ -172,7 +197,7 @@ export default async function LearnPage({
               <div className="lesson-list">
                 {lessons.map((l) => {
                   const isActive = l.order === lesson.order;
-                  const lessonAccess = hasLessonAccess(l.order);
+                  const lessonAccess = accessibleOrders.has(l.order);
                   const openable = lessonAccess || l.isPreview;
                   const lDone = completed.includes(l.order);
                   return (
@@ -201,4 +226,19 @@ export default async function LearnPage({
       <SiteFooter />
     </>
   );
+}
+
+type LockReason = "no-enrollment" | "pending" | "rejected" | "partial" | "sequential";
+
+/** Dars nega qulflanganini aniqlaydi — foydalanuvchiga to'g'ri xabar ko'rsatish uchun. */
+async function getLockReason(userId: string, slug: string, order: number): Promise<LockReason> {
+  const enrollment = await getActiveEnrollment(userId, slug);
+  if (!enrollment) {
+    const request = await getRequestStatus(userId, slug);
+    if (request?.status === "pending") return "pending";
+    if (request?.status === "rejected") return "rejected";
+    return "no-enrollment";
+  }
+  if (enrollment.unlockedThrough !== null && order > enrollment.unlockedThrough) return "partial";
+  return "sequential";
 }

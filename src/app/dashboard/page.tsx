@@ -4,9 +4,12 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { getEnrollments, isEnrollmentExpired } from "@/lib/access";
+import { getRequestStatus } from "@/lib/enrollment-requests";
 import { getCompleted, percentOf } from "@/lib/progress";
-import { allLessons } from "@/lib/course-data";
+import { allLessons, AI_FOUNDATIONS } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
+import { getUserBadges, getUserPoints } from "@/lib/gamification";
+import { getCertificate } from "@/lib/certificates";
 import { logout } from "@/app/login/actions";
 
 export default async function DashboardPage() {
@@ -14,6 +17,9 @@ export default async function DashboardPage() {
   if (!user) redirect("/login?next=/dashboard");
 
   const enrollments = await getEnrollments(user.id);
+  const [points, badges] = await Promise.all([getUserPoints(user.id), getUserBadges(user.id)]);
+  const hasCourseEnrollment = enrollments.some((e) => e.courseSlug === AI_FOUNDATIONS.slug);
+  const requestStatus = hasCourseEnrollment ? null : await getRequestStatus(user.id, AI_FOUNDATIONS.slug);
 
   // Har kurs uchun kurs + progress foizini oldindan hisoblaymiz.
   const cards = await Promise.all(
@@ -25,6 +31,7 @@ export default async function DashboardPage() {
       const lessons = allLessons(course);
       // Keyingi tugallanmagan dars (yo'q bo'lsa — birinchisi)
       const nextLesson = lessons.find((l) => !completed.includes(l.order)) ?? lessons[0];
+      const certificate = pct === 100 ? await getCertificate(user.id, e.courseSlug) : null;
       return {
         enrollment: e,
         course,
@@ -32,6 +39,7 @@ export default async function DashboardPage() {
         completedCount: completed.length,
         total: lessons.length,
         nextLesson,
+        certificate,
         isExpired: isEnrollmentExpired(e),
       };
     }),
@@ -57,20 +65,65 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {/* Streak / ball / nishonlar (real rejimda faollik bo'lsa) */}
+        {points && (
+          <div className="panel" style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 700 }}>🔥 {points.currentStreak} kun</div>
+                <div className="hint">Joriy seriya (eng uzuni: {points.longestStreak})</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 700 }}>⭐ {points.totalPoints}</div>
+                <div className="hint">Jami ball</div>
+              </div>
+              {badges.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {badges.map((b) => (
+                    <span key={b.code} className="badge badge-blue" title={b.description}>
+                      {b.icon} {b.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Mening kurslarim</h2>
 
         {cards.filter(Boolean).length === 0 ? (
           <div className="panel" style={{ textAlign: "center", padding: 40 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Hali kursingiz yo&apos;q</div>
-            <p className="hint" style={{ marginBottom: 20 }}>AI Asoslari kursini oching va o&apos;rganishni boshlang.</p>
-            <Link href="/kurs/ai-asoslari" className="btn btn-primary">Kursni ko&apos;rish →</Link>
+            {requestStatus?.status === "pending" ? (
+              <>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz ko&apos;rib chiqilmoqda</div>
+                <p className="hint" style={{ marginBottom: 20 }}>
+                  Ustoz tasdiqlagach barcha darslar, testlar va vazifalar ochiladi. Hozircha 1-darsni bepul ko&apos;rishingiz mumkin.
+                </p>
+                <Link href={`/learn/${AI_FOUNDATIONS.slug}/1`} className="btn btn-primary">1-darsni ko&apos;rish →</Link>
+              </>
+            ) : requestStatus?.status === "rejected" ? (
+              <>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz tasdiqlanmadi</div>
+                <p className="hint" style={{ marginBottom: 20 }}>Qayta murojaat qiling yoki ustoz bilan bog&apos;laning.</p>
+                <Link href={`/kurs/${AI_FOUNDATIONS.slug}#narx`} className="btn btn-primary">Qayta ariza yuborish →</Link>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Hali kursingiz yo&apos;q</div>
+                <p className="hint" style={{ marginBottom: 20 }}>AI Asoslari kursiga ro&apos;yxatdan o&apos;ting va o&apos;rganishni boshlang.</p>
+                <Link href={`/kurs/${AI_FOUNDATIONS.slug}#narx`} className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid-2">
             {cards.map((c) => {
               if (!c) return null;
-              const { enrollment: e, course, pct, completedCount, total, nextLesson, isExpired } = c;
+              const { enrollment: e, course, pct, completedCount, total, nextLesson, certificate, isExpired } = c;
               const isPartial = !isExpired && e.unlockedThrough !== null;
               return (
                 <div className="panel" key={course.slug}>
@@ -117,6 +170,15 @@ export default async function DashboardPage() {
                       style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
                     >
                       Qolgan darslarni ochish →
+                    </Link>
+                  )}
+                  {certificate && (
+                    <Link
+                      href={`/certificate/${certificate.code}`}
+                      className="btn btn-ghost"
+                      style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                    >
+                      🎓 Sertifikatni ko&apos;rish →
                     </Link>
                   )}
                 </div>

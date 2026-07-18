@@ -45,21 +45,22 @@ export default async function LandingPage() {
             <span className="grad">Super darajadagi mutaxassisga.</span>
           </h1>
           <p className="lead">
-            16 darslik amaliy kurs. Sun&apos;iy intellektni <b>tushuna</b> va{" "}
+            2 oy davom etadigan kechki <b>Google Meet</b> darslari va 16 darslik platforma. Sun&apos;iy intellektni <b>tushuna</b> va{" "}
             <b>super darajada ishlata oladigan</b> mutaxassis bo&apos;lasiz. Kod yozmasdan prompt
             yozasiz, media generatsiya qilasiz va o&apos;z asbobingizni qurasiz.{" "}
             <b>Har dars ko&apos;rsatsa bo&apos;ladigan natija qoldiradi.</b>
           </p>
           <div className="stats">
             <div className="stat"><div className="num">16</div><div className="lbl">Dars</div></div>
-            <div className="stat"><div className="num">120<small> daq</small></div><div className="lbl">Har dars</div></div>
+            <div className="stat"><div className="num">2<small> oy</small></div><div className="lbl">Jonli guruh</div></div>
             <div className="stat"><div className="num">6</div><div className="lbl">Modul</div></div>
             <div className="stat"><div className="num">6</div><div className="lbl">Artefakt</div></div>
           </div>
           <div className="hero-cta">
-            <Link href="/kurs/ai-asoslari" className="btn btn-primary">Kursni ko&apos;rish →</Link>
-            <Link href="#narx" className="btn btn-ghost">Narxlar</Link>
+            <Link href="/register" className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+            <Link href="/kurs/ai-asoslari" className="btn btn-ghost">Dasturni ko&apos;rish</Link>
           </div>
+          <p className="hint" style={{ marginTop: 16 }}>Ro&apos;yxatdan o&apos;ting, ustoz tasdiqlagach darslar ochiladi · 1-dars hoziroq bepul</p>
         </section>
 
         {/* WHO FOR */}
@@ -101,10 +102,10 @@ export default async function LandingPage() {
           </section>
         ))}
 
-        {/* PRICING */}
+        {/* NARX / QIYMAT */}
         <section className="pricing" id="narx">
-          <h2>Narxlar</h2>
-          <p className="sub">Bir marta to&apos;lang yoki oyma-oy — o&apos;zingizga qulayini tanlang.</p>
+          <h2>Qatnashish</h2>
+          <p className="sub">Ro&apos;yxatdan o&apos;ting — ustoz tasdiqlagach guruhga qo&apos;shilasiz, 2 oylik dastur to&apos;liq ochiladi.</p>
           <div className="price-grid">
             {course.pricing.map((p) => (
               <div key={p.kind} className={`price-card${p.kind === "lifetime" ? " featured" : ""}`}>
@@ -116,11 +117,11 @@ export default async function LandingPage() {
                 </div>
                 <p className="price-note">{p.note}</p>
                 <Link
-                  href={`/kurs/${course.slug}?plan=${p.kind}`}
+                  href="/register"
                   className="btn btn-primary"
                   style={{ width: "100%", justifyContent: "center" }}
                 >
-                  Tanlash
+                  Ro&apos;yxatdan o&apos;tish
                 </Link>
               </div>
             ))}
@@ -185,7 +186,7 @@ export default async function LandingPage() {
         <section className="final-cta" id="cta">
           <h2>Boshlashga tayyormisiz?</h2>
           <p>Keyingi guruh tez orada boshlanadi. O&apos;rin cheklangan — bizning jamoaga qo&apos;shiling.</p>
-          <Link href="/kurs/ai-asoslari" className="btn btn-primary">Kursga yozilish →</Link>
+          <Link href="/register" className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
         </section>
       </main>
       <SiteFooter />

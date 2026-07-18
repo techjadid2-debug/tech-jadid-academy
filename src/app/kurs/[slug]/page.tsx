@@ -4,23 +4,19 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ModuleIcon } from "@/components/course/ModuleIcon";
 import { LessonCard } from "@/components/course/LessonCard";
-import { PurchasePanel } from "@/components/course/PurchasePanel";
 import { allLessons, formatUzs } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
-import { getActiveEnrollment } from "@/lib/access";
-import { startCheckout } from "./actions";
-import type { PricingKind } from "@/lib/types";
+import { getActiveEnrollment, canAccessLesson } from "@/lib/access";
+import { getRequestStatus } from "@/lib/enrollment-requests";
+import { startCheckout, requestEnrollment } from "./actions";
 
 export default async function CoursePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ plan?: string }>;
 }) {
   const { slug } = await params;
-  const { plan } = await searchParams;
 
   const course = await getCourseAsync(slug);
   if (!course) notFound();
@@ -30,14 +26,15 @@ export default async function CoursePage({
   const unlocked = enrollment !== null;
   const unlockedThrough = enrollment?.unlockedThrough ?? null;
   const isPartial = unlocked && unlockedThrough !== null;
-  const canOpenLesson = (order: number, isPreview: boolean) =>
-    isPreview || (unlocked && (unlockedThrough === null || order <= unlockedThrough));
-  const firstLesson = allLessons(course)[0];
-  const defaultPlan: PricingKind = plan === "installment2" ? "installment2" : "lifetime";
+  const requestStatus = user && !unlocked ? await getRequestStatus(user.id, slug) : null;
+  const allCourseLessons = allLessons(course);
+  const accessibleOrders = new Set(user ? await Promise.all(allCourseLessons.map(async (lesson) => (await canAccessLesson(user.id, slug, lesson.order)) ? lesson.order : 0)) : []);
+  const canOpenLesson = (order: number, isPreview: boolean) => isPreview || accessibleOrders.has(order);
+  const firstLesson = allCourseLessons[0];
 
   return (
     <>
-      <SiteNav cta={unlocked ? { href: "/dashboard", label: "Kabinet" } : { href: "#narx", label: "Yozilish" }} />
+      <SiteNav cta={unlocked ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }} />
       <main className="shell">
         {/* Sarlavha */}
         <div style={{ maxWidth: 720, marginBottom: 36 }}>
@@ -101,7 +98,7 @@ export default async function CoursePage({
                 <form action={startCheckout}>
                   <input type="hidden" name="slug" value={course.slug} />
                   <input type="hidden" name="kind" value="installment2" />
-                  <input type="hidden" name="provider" value="payme" />
+                  <input type="hidden" name="provider" value="manual" />
                   <input type="hidden" name="step" value="2" />
                   <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
                     Qolganini ochish →
@@ -138,8 +135,66 @@ export default async function CoursePage({
                 </Link>
               </div>
             ) : (
-              <div id="narx">
-                <PurchasePanel course={course} defaultPlan={defaultPlan} />
+              <div className="panel" style={{ position: "sticky", top: 72 }} id="narx">
+                {!user ? (
+                  <>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
+                    <p className="hint" style={{ marginBottom: 18 }}>
+                      Ro&apos;yxatdan o&apos;ting — ustoz tasdiqlagach barcha darslar, testlar va vazifalar ochiladi. 1-dars hoziroq bepul.
+                    </p>
+                    <Link href="/register" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      Ro&apos;yxatdan o&apos;tish →
+                    </Link>
+                    <Link
+                      href={`/learn/${course.slug}/${firstLesson.order}`}
+                      className="btn btn-ghost"
+                      style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                    >
+                      Bepul 1-darsni ko&apos;rish
+                    </Link>
+                  </>
+                ) : requestStatus?.status === "pending" ? (
+                  <>
+                    <span className="badge badge-blue" style={{ marginBottom: 12 }}>Ko&apos;rib chiqilmoqda</span>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz yuborildi</div>
+                    <p className="hint">
+                      Ustoz tasdiqlagach barcha darslar ochiladi. Birinchi darsni hozir ko&apos;rishingiz mumkin.
+                    </p>
+                    <Link
+                      href={`/learn/${course.slug}/${firstLesson.order}`}
+                      className="btn btn-ghost"
+                      style={{ width: "100%", justifyContent: "center", marginTop: 14 }}
+                    >
+                      1-darsni ko&apos;rish
+                    </Link>
+                  </>
+                ) : requestStatus?.status === "rejected" ? (
+                  <>
+                    <span className="badge badge-red" style={{ marginBottom: 12 }}>Rad etilgan</span>
+                    <p className="hint" style={{ marginBottom: 18 }}>
+                      Arizangiz hozircha tasdiqlanmadi. Qayta murojaat qiling yoki ustoz bilan bog&apos;laning.
+                    </p>
+                    <form action={requestEnrollment}>
+                      <input type="hidden" name="slug" value={course.slug} />
+                      <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                        Qayta ariza yuborish
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
+                    <p className="hint" style={{ marginBottom: 18 }}>
+                      Ariza yuboring — ustoz tasdiqlagach darslar ochiladi.
+                    </p>
+                    <form action={requestEnrollment}>
+                      <input type="hidden" name="slug" value={course.slug} />
+                      <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                        Ariza yuborish →
+                      </button>
+                    </form>
+                  </>
+                )}
               </div>
             )}
           </aside>

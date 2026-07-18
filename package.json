@@ -7,11 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:content": "node --env-file=.env.local --import=tsx scripts/seed-course-content.ts"
+    "bootstrap:admin": "node --env-file=.env.local --import=tsx scripts/bootstrap-admin.ts",
+    "seed:content": "node --env-file=.env.local --import=tsx scripts/seed-course-content.ts",
+    "telegram:set-webhook": "node --env-file=.env.local --import=tsx scripts/set-telegram-webhook.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
+    "ai": "^7.0.19",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"

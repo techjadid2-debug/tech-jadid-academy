@@ -8,7 +8,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 // Autentifikatsiya qatlami (dual-mode).
 //
 // REAL rejim (Supabase ulangan): getCurrentUser Supabase Auth sessiyasidan
-// o'qiydi (email OTP / kelajakda Telegram·Google) va `profiles` bilan boyitadi.
+// o'qiydi. O'quvchilar admin yaratgan login + parol bilan kiradi.
 //
 // DEMO rejim (Supabase ulanmagan): foydalanuvchi `tj_user` cookie'da saqlanadi —
 // tashqi xizmatlarsiz to'liq oqimni sinash uchun.
@@ -25,8 +25,17 @@ export interface AppUser {
 }
 
 const USER_COOKIE = "tj_user";
-/** Bu email bilan kirgan foydalanuvchi admin bo'ladi (demo va real). */
-export const ADMIN_EMAIL = "admin@techjadid.uz";
+const LOGIN_EMAIL_DOMAIN = "users.techjadid.local";
+
+export function normalizeLogin(value: string): string | null {
+  const login = value.trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_.-]{2,31}$/.test(login) ? login : null;
+}
+
+/** Supabase Auth email talab qiladi, lekin o'quvchining shaxsiy emaili kerak emas. */
+export function emailForLogin(login: string): string {
+  return `${login}@${LOGIN_EMAIL_DOMAIN}`;
+}
 
 export async function getCurrentUser(): Promise<AppUser | null> {
   return isSupabaseConfigured ? getSupabaseUser() : getDemoUser();
@@ -42,7 +51,7 @@ async function getSupabaseUser(): Promise<AppUser | null> {
   } = await sb.auth.getUser();
   if (!user) return null;
 
-  const profile = await ensureProfile(user.id, user.email ?? "");
+  const profile = await getProfile(user.id);
   return {
     id: user.id,
     name: profile.full_name || user.email || "O'quvchi",
@@ -58,11 +67,10 @@ interface ProfileRow {
   role: string | null;
 }
 
-/** Profil bo'lmasa yaratadi (service role — RLS chetlab). */
-async function ensureProfile(id: string, email: string): Promise<ProfileRow> {
+/** Profil server tomonda o'qiladi; sessiyani o'qish paytida DB yozmaymiz. */
+async function getProfile(id: string): Promise<ProfileRow> {
   const admin = createSupabaseAdmin();
-  const fallbackRole = email === ADMIN_EMAIL ? "admin" : "student";
-  if (!admin) return { full_name: null, phone: null, role: fallbackRole };
+  if (!admin) return { full_name: null, phone: null, role: "student" };
 
   const { data, error } = await admin
     .from("profiles")
@@ -70,15 +78,7 @@ async function ensureProfile(id: string, email: string): Promise<ProfileRow> {
     .eq("id", id)
     .maybeSingle();
   if (error) console.error("[auth] profile lookup failed", error);
-  if (data) return data as ProfileRow;
-
-  const { data: created, error: insertError } = await admin
-    .from("profiles")
-    .insert({ id, role: fallbackRole })
-    .select("full_name, phone, role")
-    .maybeSingle();
-  if (insertError) console.error("[auth] profile creation failed", insertError);
-  return (created as ProfileRow) ?? { full_name: null, phone: null, role: fallbackRole };
+  return (data as ProfileRow) ?? { full_name: null, phone: null, role: "student" };
 }
 
 // ---- DEMO rejim ----------------------------------------------------------

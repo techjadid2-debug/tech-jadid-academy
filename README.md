@@ -1,74 +1,75 @@
-# Tech Jadid — AI O'rganish Akademiyasi
+# Tech Jadid Akademiyasi
 
-O'zbek tilida amaliy AI ta'limi platformasi. **Bepul stack** (Next.js + Supabase +
-Cloudflare R2), avtomatik to'lov (Payme/Click/Uzum), himoyalangan video.
+O'zbek tilidagi amaliy AI ta'lim platformasi. Ilova Next.js 16, Supabase va
+Vercel bilan ishlaydi. Xaridor karta orqali o'tkazma qiladi, chekni admin
+Telegram'iga yuboradi, admin esa login-parol yaratib kursga kirishni ochadi.
 
-Boshlang'ich kurs: **Sun'iy Intellekt Asoslari** (16 dars, 6 modul).
+## Hozirgi Oqim
 
-## Texnologiyalar
+1. Tashrif buyuruvchi kurs dasturi, jonli dars formati va tariflarni ko'radi.
+2. Xaridor tarifni tanlaydi, karta rekvizitlarini oladi va chekni Telegram'ga yuboradi.
+3. Admin `/admin` sahifasida o'quvchi uchun login/parol yaratadi hamda uni Telegram guruhiga qo'shadi.
+4. Bir martalik to'lov 2 oylik kursni 600 000 so'mga, oyma-oy tarif esa har oy 350 000 so'mga ochadi.
+5. Ikkinchi oy to'lovi admin tomonidan tasdiqlanganda kirish yana 30 kunga uzaytiriladi.
 
-| Qatlam | Xizmat |
-|---|---|
-| Frontend/Backend | Next.js 16 (App Router) + React 19 |
-| Uslub | Custom dizayn tizimi (Apple/Google uslubi) — `globals.css` |
-| DB + Auth + Storage | Supabase (bepul tier) |
-| Video | Cloudflare R2 signed URL + dinamik watermark (kelajakda Bunny DRM) |
-| To'lov | Payme + Click + Uzum |
-| Deploy | Vercel |
+Kurs Google Meet'da kechki jonli darslar sifatida o'tadi. Platformada har dars uchun
+slaydlar, nazariy va amaliy qism, tayyor promptlar, uy vazifasi hamda mavzudan keyingi
+test bor. AI sandbox hozircha faol emas. Progress, gamifikatsiya va sertifikat Supabase
+real rejimi yoqilganda ishlaydi.
 
-## DEMO rejim (hozir)
+## Sozlash
 
-Loyiha **hech qanday tashqi xizmatsiz** ishlaydi. Env o'zgaruvchilari bo'sh bo'lsa:
+1. Supabase SQL Editor'da migratsiyalarni ketma-ket qo'llang:
+   `0001_init.sql` dan `0009_lesson_assessments.sql` gacha, keyin `supabase/seed.sql`.
+2. `.env.local` va Vercel Environment Variables'ga quyidagilarni kiriting:
 
-- **Auth** — ism + telefon/email orqali demo kirish (cookie'da saqlanadi)
-- **Enrollment** — to'lovdan keyin kirish cookie'da ochiladi
-- **To'lov** — mock checkout ("demo tasdiqlash" tugmasi to'liq oqimni yakunlaydi)
-- **Video** — "video tez orada" placeholder (kirish nazorati va watermark ishlaydi)
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   SUPABASE_SERVICE_ROLE_KEY=
+   NEXT_PUBLIC_APP_URL=https://your-project.vercel.app
+   PAYMENT_CARD_NUMBER=
+   PAYMENT_CARD_HOLDER=
+   PAYMENT_TELEGRAM_URL=https://t.me/your_username
+   ```
 
-Bu to'liq foydalanuvchi oqimini (landing → sotib olish → dars ko'rish) darhol sinash imkonini beradi.
+3. Bir marta administrator yarating:
 
-## Ishga tushirish
+   ```bash
+   ADMIN_LOGIN=admin ADMIN_INITIAL_PASSWORD='kuchli-parol' npm run bootstrap:admin
+   ```
+
+   Script tugagach `ADMIN_INITIAL_PASSWORD`ni `.env.local`dan o'chiring. Bu login va
+   parol bilan `/login` orqali admin panelga kiring.
+
+## Lokal Ishga Tushirish
 
 ```bash
 npm install
 npm run dev
-# http://localhost:3000
 ```
 
-### To'liq oqimni sinash
-1. `/` — landing sahifa
-2. "Kursni ko'rish" → `/kurs/ai-asoslari`
-3. Tarif + to'lov usuli tanlab "To'lash" → login (demo) → checkout
-4. "Demo tasdiqlash" → kurs ochiladi → `/learn/ai-asoslari/1`
-5. `/dashboard` — kabinet; admin uchun `admin@techjadid.uz` bilan kiring
+Tekshiruvlar:
 
-## Real rejimga o'tish
-
-1. **Supabase**: loyiha yarating, `supabase/migrations/0001_init.sql` + `supabase/seed.sql`
-   ni qo'llang, `.env.local`ga URL/kalitlarni qo'ying. `src/lib/auth.ts` va
-   `src/lib/access.ts` cookie o'rniga Supabase'ga o'tkaziladi.
-2. **Video**: Cloudflare R2 bucket + `R2_PUBLIC_BASE`, `VIDEO_SIGN_SECRET`. `src/lib/video.ts`
-   allaqachon signed URL beradi.
-3. **To'lov**: har provayder kalitlarini `.env.local`ga qo'ying;
-   `src/app/api/webhooks/*` dagi `TODO(real)` bloklarini yakunlang.
-4. **Cron**: `vercel.json` cron `/api/cron/renew-subscriptions` ni chaqiradi.
-
-## Xavfsizlik (video)
-
-Reja: signed URL (muddat+imzo) + dinamik watermark (foydalanuvchi telefoni) + domen
-qulfi + seans cheklovi. Daromad kelgach Bunny DRM (Widevine/PlayReady/FairPlay).
-
-## Loyiha tuzilmasi
-
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
 ```
-src/
-  app/            # sahifalar + API route'lar (App Router)
-    kurs/[slug]/  # kurs sahifasi + sotib olish
-    learn/        # himoyalangan video player
-    checkout/     # to'lov (mock)
-    api/webhooks/ # payme/click/uzum
-  components/     # UI komponentlar
-  lib/            # course-data, auth, access, video, payments
-supabase/         # migrations + seed
-_reference/       # asl landing HTML (arxiv)
-```
+
+## Muhim Eslatmalar
+
+- `SUPABASE_SERVICE_ROLE_KEY` faqat serverda, `.env.local` va Vercel secret sifatida bo'lishi kerak.
+- O'quvchi parolini faqat admin yangilaydi; parol tiklash email orqali yuborilmaydi.
+- Vercel Hobby tijoriy foydalanishni cheklaydi. Ommaviy pullik loyiha uchun ushbu platforma cheklovini hisobga oling.
+
+## Jonli guruh launch checklist
+
+1. Production domenini `NEXT_PUBLIC_APP_URL`ga qo'ying va barcha environment variable'larni Vercel'da Production muhiti uchun kiriting.
+2. Telegram bot ishlatilsa, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`,
+   `TELEGRAM_ADMIN_IDS` va `TELEGRAM_WEBHOOK_SECRET`ni kiriting, so'ng
+   `npm run telegram:set-webhook`ni bir marta ishga tushiring.
+3. Production deploydan keyin bitta test buyurtma qiling: karta rekvizitlari,
+   Telegram havolasi, admin hisob yaratishi, login va 1–8/to'liq kirishni tekshiring.
+4. To'lov tasdiqlangach o'quvchini Telegram guruhiga qo'shing, login/parolini yuboring
+   va birinchi Google Meet vaqtini xabardor qiling.

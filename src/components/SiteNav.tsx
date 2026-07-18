@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface NavLink {
   href: string;
@@ -12,7 +12,7 @@ interface SiteNavProps {
   /** Bo'lim havolalari (landing uchun ankerlar) */
   links?: NavLink[];
   /** O'ng tarafdagi asosiy tugma */
-  cta?: { href: string; label: string };
+  cta?: { href: string; label: string; external?: boolean };
 }
 
 const DEFAULT_LINKS: NavLink[] = [
@@ -24,9 +24,26 @@ const DEFAULT_LINKS: NavLink[] = [
   { href: "/#portfolio", label: "Portfolio" },
 ];
 
-export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/#narx", label: "Kursga yozilish" } }: SiteNavProps) {
+export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", label: "Ro'yxatdan o'tish" } }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -56,15 +73,21 @@ export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/#narx", label: 
           Tech&nbsp;Jadid
         </Link>
 
-        <nav className={`nav-links${menuOpen ? " open" : ""}`} id="menu">
+        <nav ref={menuRef} className={`nav-links${menuOpen ? " open" : ""}`} id="menu" aria-label="Asosiy menyu">
           {links.map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setMenuOpen(false)}>
               {l.label}
             </Link>
           ))}
-          <Link href={cta.href} className="nav-cta-mobile" onClick={() => setMenuOpen(false)}>
-            {cta.label}
-          </Link>
+          {cta.external ? (
+            <a href={cta.href} className="nav-cta-mobile" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>
+              {cta.label}
+            </a>
+          ) : (
+            <Link href={cta.href} className="nav-cta-mobile" onClick={() => setMenuOpen(false)}>
+              {cta.label}
+            </Link>
+          )}
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -77,14 +100,21 @@ export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/#narx", label: 
               <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" />
             </svg>
           </button>
-          <Link href={cta.href} className="nav-cta">
-            {cta.label}
-          </Link>
+          {cta.external ? (
+            <a href={cta.href} className="nav-cta" target="_blank" rel="noreferrer">
+              {cta.label}
+            </a>
+          ) : (
+            <Link href={cta.href} className="nav-cta">
+              {cta.label}
+            </Link>
+          )}
         </div>
 
         <button
           className="burger"
           aria-label="Menyu"
+          aria-controls="menu"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((v) => !v)}
           type="button"

@@ -10,6 +10,15 @@ export interface LessonRow {
   text: string;
 }
 
+export type LessonContentBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; text: string }
+  | { type: "image"; src: string; alt: string; caption?: string }
+  | { type: "callout"; title: string; text: string }
+  | { type: "steps"; title: string; items: string[] }
+  | { type: "prompt"; title: string; text: string }
+  | { type: "task"; title: string; text: string; checklist: string[] };
+
 export interface Lesson {
   /** Global tartib raqami (1..16) */
   order: number;
@@ -22,6 +31,8 @@ export interface Lesson {
   youtubeId: string | null;
   durationSec: number;
   rows: LessonRow[];
+  /** Dars sahifasida tartib bilan ko'rsatiladigan boyitilgan materiallar. */
+  content?: LessonContentBlock[];
   /** "Sinab ko'ring" AI maydoni shu darsda ko'rsatiladimi (admin CMS orqali boshqariladi) */
   sandboxEnabled: boolean;
 }
@@ -68,7 +79,7 @@ export interface Enrollment {
   unlockedThrough: number | null;
 }
 
-export type PaymentProvider = "payme" | "click" | "uzum";
+export type PaymentProvider = "payme" | "click" | "uzum" | "manual";
 export type PaymentStatus = "pending" | "paid" | "canceled";
 
 export interface Payment {
@@ -81,4 +92,40 @@ export interface Payment {
   kind: PricingKind;
   courseSlug: string;
   createdAt: string;
+}
+
+// ---- Ro'yxatdan o'tish arizasi ----
+
+export type EnrollmentRequestStatus = "pending" | "approved" | "rejected";
+
+export interface EnrollmentRequest {
+  id: string;
+  userId: string;
+  courseSlug: string;
+  status: EnrollmentRequestStatus;
+  contact: string | null;
+  createdAt: string;
+}
+
+// ---- Uy vazifasi ----
+
+export type HomeworkStatus = "submitted" | "ai_graded" | "reviewed";
+
+export interface HomeworkSubmission {
+  id: string;
+  userId: string;
+  courseSlug: string;
+  lessonOrder: number;
+  contentText: string | null;
+  linkUrl: string | null;
+  filePath: string | null;
+  fileName: string | null;
+  status: HomeworkStatus;
+  aiScore: number | null;
+  aiFeedback: string | null;
+  teacherScore: number | null;
+  teacherFeedback: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

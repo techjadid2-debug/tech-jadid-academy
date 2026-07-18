@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Lesson } from "@/lib/types";
+import { LessonCover } from "@/components/course/LessonCover";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -26,13 +27,9 @@ export function LessonCard({ lesson, href, reveal, unlocked }: LessonCardProps) 
   const inner = (
     <>
       <div className="vframe">
-        <div className="play">
-          <svg viewBox="0 0 24 24">
-            <path d="M5 3l16 9-16 9V3z" />
-          </svg>
-        </div>
+        <LessonCover order={lesson.order} title={lesson.title} />
         {lesson.isPreview ? (
-          <span className="vf-lock vf-free">Bepul preview</span>
+          <span className="vf-lock vf-free">Bepul tanishuv</span>
         ) : unlocked ? null : (
           <span className="vf-lock">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -42,7 +39,7 @@ export function LessonCard({ lesson, href, reveal, unlocked }: LessonCardProps) 
             Qulflangan
           </span>
         )}
-        <span className="vf-tag">Dars {pad(lesson.order)} · Video</span>
+        <span className="vf-tag">Dars {pad(lesson.order)} · Jonli dars shpargalkasi</span>
         {lesson.durationSec > 0 && <span className="vf-dur">{formatDur(lesson.durationSec)}</span>}
       </div>
       <div className="c-body">

@@ -6,6 +6,7 @@ import { canAccessLesson } from "@/lib/access";
 import { setCompleted } from "@/lib/progress";
 import { getLesson, allLessons } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
+import { isLessonCleared } from "@/lib/lesson-assessments";
 
 /** Darsni yakunlangan deb belgilaydi va keyingi darsga (yoki kabinetga) o'tadi. */
 export async function completeAndNext(formData: FormData) {
@@ -19,9 +20,10 @@ export async function completeAndNext(formData: FormData) {
   if (!course || !getLesson(course, order)) redirect("/");
 
   // Faqat shu darsga (dars darajasida) kirish huquqi bo'lsa progress yoziladi.
-  if (await canAccessLesson(user.id, slug, order)) {
-    await setCompleted(user.id, slug, order, true);
-  }
+  if (!(await canAccessLesson(user.id, slug, order))) redirect(`/kurs/${slug}#narx`);
+  // Dars progressi faqat 10 savolli test 90% bilan yopilgach yoziladi.
+  if (!(await isLessonCleared(user.id, slug, order))) redirect(`/learn/${slug}/${order}#assessment`);
+  await setCompleted(user.id, slug, order, true);
 
   const lessons = allLessons(course);
   const idx = lessons.findIndex((l) => l.order === order);

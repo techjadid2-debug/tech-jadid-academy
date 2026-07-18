@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { setDemoUser, makeUserId, clearUser, ADMIN_EMAIL, type AppUser } from "@/lib/auth";
+import { setDemoUser, makeUserId, clearUser, emailForLogin, normalizeLogin, type AppUser } from "@/lib/auth";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 function safeNext(next: FormDataEntryValue | null): string {
@@ -11,45 +11,21 @@ function safeNext(next: FormDataEntryValue | null): string {
 }
 
 // ============================================================================
-// REAL rejim — Supabase email OTP (6 xonali kod).
-// Ikki qadam: (1) sendOtp emailga kod yuboradi, (2) verifyOtp kodni tekshiradi.
+// REAL rejim — admin yaratgan login + parol.
 // ============================================================================
 
-export async function sendOtp(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+export async function signInWithPassword(formData: FormData) {
+  const login = normalizeLogin(String(formData.get("login") ?? ""));
+  const password = String(formData.get("password") ?? "");
   const next = safeNext(formData.get("next"));
-  if (!email) redirect(`/login?next=${encodeURIComponent(next)}&error=email`);
+  if (!login || !password) redirect(`/login?next=${encodeURIComponent(next)}&error=credentials`);
 
   const sb = await createSupabaseServer();
   if (!sb) redirect(`/login?next=${encodeURIComponent(next)}`);
 
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
-
-  const q = new URLSearchParams({ next, email });
+  const { error } = await sb.auth.signInWithPassword({ email: emailForLogin(login), password });
   if (error) {
-    q.set("error", "send");
-    redirect(`/login?${q.toString()}`);
-  }
-  q.set("stage", "code");
-  redirect(`/login?${q.toString()}`);
-}
-
-export async function verifyOtp(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const token = String(formData.get("token") ?? "").trim();
-  const next = safeNext(formData.get("next"));
-
-  const sb = await createSupabaseServer();
-  if (!sb) redirect(`/login?next=${encodeURIComponent(next)}`);
-
-  const { error } = await sb.auth.verifyOtp({ email, token, type: "email" });
-
-  if (error) {
-    const q = new URLSearchParams({ next, email, stage: "code", error: "code" });
-    redirect(`/login?${q.toString()}`);
+    redirect(`/login?next=${encodeURIComponent(next)}&error=credentials`);
   }
   redirect(next);
 }
@@ -69,7 +45,7 @@ export async function demoLogin(formData: FormData) {
     name,
     email: isEmail ? contact : "",
     phone: isEmail ? "" : contact,
-    role: contact === ADMIN_EMAIL ? "admin" : "student",
+    role: "student",
   };
 
   await setDemoUser(user);

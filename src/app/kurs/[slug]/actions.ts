@@ -1,39 +1,35 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
 import { getCourseAsync } from "@/lib/course";
-import { createCheckout } from "@/lib/payments";
-import type { PaymentProvider, PricingKind } from "@/lib/types";
+import { getCurrentUser } from "@/lib/auth";
+import { createRequest } from "@/lib/enrollment-requests";
+import type { PricingKind } from "@/lib/types";
+
+/** Kirgan, lekin hali ariza yubormagan (yoki rad etilgan) o'quvchi uchun — qayta ariza yuboradi. */
+export async function requestEnrollment(formData: FormData) {
+  const user = await getCurrentUser();
+  const slug = String(formData.get("slug") ?? "");
+  if (!user || !slug) redirect(`/login?next=${encodeURIComponent(`/kurs/${slug}`)}`);
+
+  await createRequest(user.id, slug, user.phone || user.email || "", user.name);
+  redirect(`/kurs/${slug}#narx`);
+}
 
 /**
- * Kurs sahifasidagi "Sotib olish" tugmasi. Foydalanuvchi kirmagan bo'lsa —
- * login sahifasiga; aks holda checkout yaratib, to'lov sahifasiga yo'naltiradi.
+ * Qo'lda to'lov ko'rsatmasiga yo'naltiradi. Hisob faqat admin tasdiqlagach
+ * yaratiladi, shuning uchun xarid bosqichida login talab qilinmaydi.
  */
 export async function startCheckout(formData: FormData) {
   const slug = String(formData.get("slug") ?? "");
   const kind = String(formData.get("kind") ?? "lifetime") as PricingKind;
-  const provider = String(formData.get("provider") ?? "payme") as PaymentProvider;
-  const step = formData.get("step") === "2" ? "2" : "1";
+  const step: "1" | "2" = formData.get("step") === "2" ? "2" : "1";
 
   const course = await getCourseAsync(slug);
   if (!course) redirect("/");
 
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/kurs/${slug}?plan=${kind}`)}`);
-  }
-
-  const option = course.pricing.find((p) => p.kind === kind) ?? course.pricing[0];
-
-  const checkout = createCheckout({
-    provider,
-    userId: user.id,
-    courseSlug: slug,
-    kind: option.kind,
-    amountUzs: option.priceUzs,
-    step,
-  });
-
-  redirect(checkout.redirectUrl);
+  const effectiveKind: PricingKind = step === "2" ? "installment2" : kind;
+  const option = course.pricing.find((p) => p.kind === effectiveKind) ?? course.pricing[0];
+  const params = new URLSearchParams({ slug, kind: option.kind, step });
+  redirect(`/checkout?${params.toString()}`);
 }

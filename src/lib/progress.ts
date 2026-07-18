@@ -5,6 +5,9 @@ import { allLessons } from "./course-data";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getLessonId } from "@/lib/supabase/db";
+import { getCourseAsync } from "@/lib/course";
+import { awardBadge, recordActivity } from "@/lib/gamification";
+import { issueCertificateIfEligible } from "@/lib/certificates";
 
 // ============================================================================
 // Dars progressi — dual-mode.
@@ -81,11 +84,49 @@ async function setDbCompleted(
   if (!admin) return;
   const lessonId = await getLessonId(slug, order);
   if (!lessonId) return;
-  const { error } = await admin.from("lesson_progress").upsert(
-    { user_id: userId, lesson_id: lessonId, completed: done, updated_at: new Date().toISOString() },
-    { onConflict: "user_id,lesson_id" },
-  );
-  if (error) console.error("[progress] setDbCompleted failed", error);
+
+  // DB RPC row-lock + immutable first_completed_at bilan race-safe claim qiladi.
+  const { data: firstCompletion, error } = await admin.rpc("set_lesson_progress_claim", {
+    p_user_id: userId,
+    p_lesson_id: lessonId,
+    p_completed: done,
+  });
+  if (error) {
+    console.error("[progress] setDbCompleted failed", error);
+    return;
+  }
+
+  if (done) {
+    await onLessonProgressChanged(userId, slug, firstCompletion === true);
+  }
+}
+
+/** Gamifikatsiya hook'i: first event ball beradi, lekin har safar course/cert reconciliation qiladi. */
+async function onLessonProgressChanged(userId: string, slug: string, firstCompletion: boolean): Promise<void> {
+  try {
+    if (firstCompletion) {
+      await recordActivity(userId, { lessonsCompleted: 1, points: 10 });
+      await awardBadge(userId, "first-lesson");
+    }
+
+    const course = await getCourseAsync(slug);
+    if (!course) return;
+    const completed = await getDbCompleted(userId, slug);
+
+    const module1 = course.modules.find((m) => m.order === 1);
+    if (module1 && module1.lessons.every((l) => completed.includes(l.order))) {
+      await awardBadge(userId, "module-1");
+    }
+
+    if (percentOf(course, completed) === 100) {
+      const newlyAwarded = await awardBadge(userId, "course-100");
+      if (newlyAwarded) await recordActivity(userId, { points: 50 }); // kurs bonus — bir marta
+      await issueCertificateIfEligible(userId, slug);
+    }
+  } catch (e) {
+    // Gamifikatsiya xatosi dars belgilashni to'xtatmasin.
+    console.error("[progress] gamification hook failed", e);
+  }
 }
 
 // ---- DEMO rejim (cookie) -------------------------------------------------
