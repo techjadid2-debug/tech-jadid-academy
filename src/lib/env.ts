@@ -1,3 +1,5 @@
+import "server-only";
+
 // Muhit sozlamalari va "qaysi xizmat ulangan" bayroqlari.
 // Ko'p xizmatlar kalitlari hali qo'yilmagan bo'lishi mumkin — kod bularga qarab
 // DEMO (mock) rejim yoki real rejimga o'tadi.
@@ -59,4 +61,11 @@ export const isManualPaymentConfigured = Boolean(
     env.telegramBotUsername &&
     env.telegramAdminIds.length > 0 &&
     env.telegramWebhookSecret,
+);
+
+/** Yangi checkout yaratish uchun karta va chek yuborish kanali tayyormi? */
+export const isCheckoutConfigured = Boolean(
+  env.paymentCardNumber &&
+    env.paymentCardHolder &&
+    (env.paymentTelegramUrl || isManualPaymentConfigured),
 );

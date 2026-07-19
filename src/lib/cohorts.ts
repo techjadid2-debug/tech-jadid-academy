@@ -66,9 +66,45 @@ export interface StudentCohortContext {
   nextSession: CohortLessonSchedule | null;
 }
 
+export interface PublicCohortSummary {
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  status: CohortStatus;
+}
+
 export function isTeacher(user: AppUser): boolean {
   return user.role === "admin" || user.role === "instructor";
 }
+
+/** Landing va kurs sahifasi uchun faqat ommaviy jadval ma'lumotlari. */
+export const getPublicCohortSummary = cache(async (courseSlug: string): Promise<PublicCohortSummary | null> => {
+  const admin = createSupabaseAdmin();
+  const courseId = await getCourseId(courseSlug);
+  if (!admin || !courseId) return null;
+  const { data, error } = await admin
+    .from("cohorts")
+    .select("title, starts_at, ends_at, timezone, status")
+    .eq("course_id", courseId)
+    .in("status", ["open", "active"])
+    .gte("ends_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[cohorts] public cohort lookup failed", error);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    title: data.title as string,
+    startsAt: data.starts_at as string,
+    endsAt: data.ends_at as string,
+    timezone: data.timezone as string,
+    status: data.status as CohortStatus,
+  };
+});
 
 /** Ustoz ko'ra oladigan guruhlar. Admin barcha guruhlarni, instructor faqat o'zinikini ko'radi. */
 export async function listTeacherCohorts(user: AppUser, courseSlug: string): Promise<CohortSummary[]> {

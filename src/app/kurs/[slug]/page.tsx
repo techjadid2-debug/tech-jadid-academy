@@ -11,6 +11,7 @@ import { getActiveEnrollment, canAccessLesson } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
 import { startCheckout, requestEnrollment } from "./actions";
 import { getPendingPaymentForUser } from "@/lib/payments/db";
+import { getPublicCohortSummary } from "@/lib/cohorts";
 
 export default async function CoursePage({
   params,
@@ -19,10 +20,12 @@ export default async function CoursePage({
 }) {
   const { slug } = await params;
 
-  const course = await getCourseAsync(slug);
+  const [course, user, cohort] = await Promise.all([
+    getCourseAsync(slug),
+    getCurrentUser(),
+    getPublicCohortSummary(slug),
+  ]);
   if (!course) notFound();
-
-  const user = await getCurrentUser();
   const enrollment = user ? await getActiveEnrollment(user.id, slug) : null;
   const unlocked = enrollment !== null;
   const unlockedThrough = enrollment?.unlockedThrough ?? null;
@@ -36,7 +39,10 @@ export default async function CoursePage({
 
   return (
     <>
-      <SiteNav cta={unlocked ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }} />
+      <SiteNav
+        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }}
+        secondaryCta={!user ? { href: "/login", label: "Kirish" } : undefined}
+      />
       <main className="shell">
         {/* Sarlavha */}
         <div style={{ maxWidth: 720, marginBottom: 36 }}>
@@ -50,6 +56,15 @@ export default async function CoursePage({
             {unlocked && !isPartial && <span className="badge badge-green">✓ Sizda ochiq</span>}
             {isPartial && <span className="badge badge-blue">1–{unlockedThrough}-darslar ochiq</span>}
           </div>
+        </div>
+
+        <div className="panel course-availability">
+          <b>{cohort ? `Ochiq guruh: ${cohort.title}` : "Yangi guruh sanasi kutilmoqda"}</b>
+          <p className="hint">
+            {cohort
+              ? `${formatCohortStart(cohort.startsAt)} boshlanadi. Jadval va tarif arizadan keyin tasdiqlanadi.`
+              : "Aniq kun va vaqt e'lon qilinmagan. Ariza qoldiring; jadval va tarifni bilmasdan turib to'lov qilishingiz shart emas."}
+          </p>
         </div>
 
         <div className="learn-grid">
@@ -212,4 +227,15 @@ export default async function CoursePage({
       <SiteFooter />
     </>
   );
+}
+
+function formatCohortStart(value: string) {
+  return new Intl.DateTimeFormat("uz-UZ", {
+    timeZone: "Asia/Tashkent",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

@@ -1,12 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { emailForLogin, normalizeLogin, setDemoUser, makeUserId, type AppUser } from "@/lib/auth";
+import { emailForLogin, setDemoUser, makeUserId, type AppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createRequest } from "@/lib/enrollment-requests";
 import { AI_FOUNDATIONS } from "@/lib/course-data";
 import { isSupabaseConfigured } from "@/lib/env";
+import { parseRegistrationForm } from "@/lib/registration";
 
 // ============================================================================
 // Ochiq ro'yxatdan o'tish — o'quvchi o'zi hisob yaratadi, lekin bu darsларga
@@ -14,18 +15,10 @@ import { isSupabaseConfigured } from "@/lib/env";
 // Ustoz cohort va payment order tayyorlaydi; kirish faqat payment paid bo'lgach ochiladi.
 // ============================================================================
 
-function readForm(formData: FormData) {
-  const login = normalizeLogin(String(formData.get("login") ?? ""));
-  const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("fullName") ?? "").trim();
-  const contact = String(formData.get("contact") ?? "").trim();
-  if (!login || password.length < 8 || !fullName) return null;
-  return { login, password, fullName, contact };
-}
-
 export async function registerStudent(formData: FormData) {
-  const input = readForm(formData);
-  if (!input) redirect("/register?error=invalid");
+  const parsed = parseRegistrationForm(formData);
+  if (!parsed.ok) redirect(`/register?error=${parsed.error}`);
+  const input = parsed.value;
 
   const courseSlug = AI_FOUNDATIONS.slug;
 
@@ -38,7 +31,8 @@ export async function registerStudent(formData: FormData) {
       role: "student",
     };
     await setDemoUser(user);
-    await createRequest(user.id, courseSlug, input.contact, input.fullName);
+    const requested = await createRequest(user.id, courseSlug, input.contact, input.fullName);
+    if (!requested) redirect("/register?error=server");
     redirect("/dashboard?requested=1");
   }
 
@@ -68,11 +62,16 @@ export async function registerStudent(formData: FormData) {
     redirect("/register?error=duplicate");
   }
 
-  await createRequest(userId, courseSlug, input.contact, input.fullName);
+  const requested = await createRequest(userId, courseSlug, input.contact, input.fullName);
+  if (!requested) {
+    await admin.auth.admin.deleteUser(userId);
+    redirect("/register?error=server");
+  }
 
   // Yangi hisobga darhol sessiya ochamiz (login sahifasiga qaytmasin).
   const sb = await createSupabaseServer();
-  await sb?.auth.signInWithPassword({ email: emailForLogin(input.login), password: input.password });
+  const { error: signInError } = (await sb?.auth.signInWithPassword({ email: emailForLogin(input.login), password: input.password })) ?? { error: new Error("Supabase session unavailable") };
+  if (signInError) redirect("/login?registered=1");
 
   redirect("/dashboard?requested=1");
 }

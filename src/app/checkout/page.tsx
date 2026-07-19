@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { formatUzs } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
-import { env } from "@/lib/env";
+import { env, isCheckoutConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/auth";
 import { getPaymentForCheckout } from "@/lib/payments/db";
 import { telegramStartUrl } from "@/lib/telegram";
@@ -28,7 +28,7 @@ export default async function CheckoutPage({
   if (!course) redirect("/dashboard");
 
   const receiptUrl = telegramStartUrl(payment.id) ?? (env.paymentTelegramUrl || null);
-  const canPay = Boolean(env.paymentCardNumber && env.paymentCardHolder && receiptUrl);
+  const canPay = Boolean(isCheckoutConfigured && receiptUrl);
 
   return (
     <>
@@ -61,7 +61,12 @@ export default async function CheckoutPage({
                 Chekni Telegram&apos;da yuborish
               </a>
             </>
-          ) : <p className="hint">To&apos;lov rekvizitlari hali sozlanmagan. Ustoz bilan bog&apos;laning.</p>}
+          ) : (
+            <div>
+              <b>Hozircha pul o&apos;tkazmang</b>
+              <p className="hint" style={{ marginTop: 8 }}>To&apos;lov rekvizitlari yoki chek yuborish kanali to&apos;liq tayyor emas. Ustoz tayyorligini tasdiqlagach davom eting.</p>
+            </div>
+          )}
         </div>
         <p className="hint" style={{ margin: "14px 4px 0", textAlign: "center" }}>Chek faqat ushbu buyurtma raqami bilan qabul qilinadi. Tasdiq holati kabinetingizda ko&apos;rinadi.</p>
         <Link href="/dashboard" className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 10 }}>Kabinetga qaytish</Link>

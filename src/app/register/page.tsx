@@ -4,11 +4,15 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { registerStudent } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 const ERROR_TEXT: Record<string, string> = {
   invalid: "Barcha maydonlarni to'ldiring. Parol kamida 8 belgidan iborat bo'lishi kerak.",
   duplicate: "Bu login band. Boshqa login tanlang yoki kiring.",
   server: "Ro'yxatdan o'tish hozircha ishlamayapti. Birozdan so'ng qayta urinib ko'ring.",
+  contact: "Telegram username yoki O'zbekiston telefon raqamini to'g'ri kiriting.",
+  password: "Parol va takroriy parol bir xil emas.",
+  consent: "Arizani yuborish uchun aloqa ma'lumotidan foydalanishga rozilik bering.",
 };
 
 export default async function RegisterPage({
@@ -33,7 +37,7 @@ export default async function RegisterPage({
 
         <div className="panel">
           {error && ERROR_TEXT[error] && (
-            <p className="hint" style={{ color: "var(--danger, #d33)", marginBottom: 12 }}>
+            <p className="hint" role="alert" aria-live="polite" style={{ color: "var(--red)", marginBottom: 12 }}>
               {ERROR_TEXT[error]}
             </p>
           )}
@@ -44,19 +48,29 @@ export default async function RegisterPage({
             </div>
             <div className="field">
               <label htmlFor="contact">Telegram yoki telefon</label>
-              <input id="contact" name="contact" placeholder="@username yoki +998 90 123 45 67" required />
+              <input id="contact" name="contact" placeholder="@username yoki +998 90 123 45 67" autoComplete="tel" required />
+              <span className="hint">Masalan: @abdulaziz yoki +998 90 123 45 67</span>
             </div>
             <div className="field">
               <label htmlFor="login">Login</label>
-              <input id="login" name="login" pattern="[a-z0-9][a-z0-9_.-]{2,31}" placeholder="masalan: abdulaziz01" autoComplete="username" required />
+              <input id="login" name="login" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,31}" placeholder="masalan: abdulaziz01" autoComplete="username" required />
+              <span className="hint">3–32 belgi: harf, raqam, nuqta, chiziqcha yoki pastki chiziq.</span>
             </div>
             <div className="field">
               <label htmlFor="password">Parol</label>
               <input id="password" name="password" type="password" minLength={8} autoComplete="new-password" required />
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+            <div className="field">
+              <label htmlFor="passwordConfirm">Parolni takrorlang</label>
+              <input id="passwordConfirm" name="passwordConfirm" type="password" minLength={8} autoComplete="new-password" required />
+            </div>
+            <label className="consent-row">
+              <input type="checkbox" name="consent" required />
+              <span>Ustoz arizam bo&apos;yicha men bilan Telegram yoki telefon orqali bog&apos;lanishiga roziman.</span>
+            </label>
+            <SubmitButton pendingLabel="Ariza yuborilmoqda…" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
               Ariza yuborish
-            </button>
+            </SubmitButton>
           </form>
           <p className="hint" style={{ marginTop: 14, textAlign: "center" }}>
             Hisobingiz bormi? <Link href="/login">Kirish</Link>

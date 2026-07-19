@@ -10,6 +10,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
 import type { PricingKind } from "@/lib/types";
 import { buildCohortSchedule } from "@/lib/cohort-schedule";
+import { isCheckoutConfigured } from "@/lib/env";
 
 async function requireTeacherDb(cohortId?: string) {
   const user = await getCurrentUser();
@@ -173,6 +174,7 @@ export async function prepareApplicationPayment(formData: FormData) {
   const kind = rawKind === "monthly" ? "monthly" : "lifetime";
   if (!requestId || !cohortId) redirect("/teacher?error=invalid#applications");
   await requireTeacherDb(cohortId);
+  if (!isCheckoutConfigured) redirect("/teacher?error=payment-config#applications");
   const paymentId = await createPaymentForRequest(requestId, cohortId, kind);
   if (!paymentId) redirect("/teacher?error=payment#applications");
   revalidatePath("/teacher");

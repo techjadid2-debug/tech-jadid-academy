@@ -13,6 +13,8 @@ interface SiteNavProps {
   links?: NavLink[];
   /** O'ng tarafdagi asosiy tugma */
   cta?: { href: string; label: string; external?: boolean };
+  /** Asosiy tugmadan oldingi ikkilamchi havola */
+  secondaryCta?: { href: string; label: string; external?: boolean };
 }
 
 const DEFAULT_LINKS: NavLink[] = [
@@ -24,7 +26,7 @@ const DEFAULT_LINKS: NavLink[] = [
   { href: "/#portfolio", label: "Portfolio" },
 ];
 
-export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", label: "Ro'yxatdan o'tish" } }: SiteNavProps) {
+export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", label: "Ro'yxatdan o'tish" }, secondaryCta }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLElement>(null);
@@ -79,6 +81,13 @@ export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", labe
               {l.label}
             </Link>
           ))}
+          {secondaryCta && (
+            secondaryCta.external ? (
+              <a href={secondaryCta.href} className="nav-secondary-mobile" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>{secondaryCta.label}</a>
+            ) : (
+              <Link href={secondaryCta.href} className="nav-secondary-mobile" onClick={() => setMenuOpen(false)}>{secondaryCta.label}</Link>
+            )
+          )}
           {cta.external ? (
             <a href={cta.href} className="nav-cta-mobile" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>
               {cta.label}
@@ -100,6 +109,13 @@ export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", labe
               <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" />
             </svg>
           </button>
+          {secondaryCta && (
+            secondaryCta.external ? (
+              <a href={secondaryCta.href} className="nav-secondary" target="_blank" rel="noreferrer">{secondaryCta.label}</a>
+            ) : (
+              <Link href={secondaryCta.href} className="nav-secondary">{secondaryCta.label}</Link>
+            )
+          )}
           {cta.external ? (
             <a href={cta.href} className="nav-cta" target="_blank" rel="noreferrer">
               {cta.label}

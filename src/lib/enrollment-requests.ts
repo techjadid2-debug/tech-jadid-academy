@@ -37,15 +37,15 @@ export async function getRequestStatus(userId: string, courseSlug: string): Prom
 }
 
 /** Yangi ariza yaratadi (allaqachon pending bo'lsa — mavjudini qaytaradi). Muvaffaqiyatli bo'lsa ustozga Telegram xabari yuboradi. */
-export async function createRequest(userId: string, courseSlug: string, contact: string, displayName: string): Promise<void> {
+export async function createRequest(userId: string, courseSlug: string, contact: string, displayName: string): Promise<boolean> {
   const existing = await getRequestStatus(userId, courseSlug);
-  if (existing?.status === "pending") return;
+  if (existing && ["pending", "contacted", "payment_pending", "approved"].includes(existing.status)) return true;
 
   if (isSupabaseConfigured) {
     const admin = createSupabaseAdmin();
-    if (!admin) return;
+    if (!admin) return false;
     const courseId = await getCourseId(courseSlug);
-    if (!courseId) return;
+    if (!courseId) return false;
     const { data, error } = await admin
       .from("enrollment_requests")
       .insert({ user_id: userId, course_id: courseId, contact: contact || null })
@@ -53,10 +53,10 @@ export async function createRequest(userId: string, courseSlug: string, contact:
       .single();
     if (error) {
       console.error("[enrollment-requests] createRequest failed", error);
-      return;
+      return false;
     }
     await notifyAdminsOfNewRequest(data.id as string, displayName, contact);
-    return;
+    return true;
   }
 
   const store = await cookies();
@@ -75,6 +75,7 @@ export async function createRequest(userId: string, courseSlug: string, contact:
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
+  return true;
 }
 
 /** Ustozga Telegram orqali xabar + darhol tasdiqlash/rad etish tugmalari. */

@@ -22,7 +22,7 @@ export function VideoPlayer({ signedUrl, youtubeId, watermark, locked }: VideoPl
           </svg>
           <div style={{ fontWeight: 700, fontSize: 18 }}>Bu dars qulflangan</div>
           <p style={{ opacity: 0.7, fontSize: 14, maxWidth: 300 }}>
-            Ko&apos;rish uchun kursni sotib oling yoki obuna bo&apos;ling.
+            Kursga ariza yuboring. Guruh va to&apos;lov tasdiqlangach dars jadvali ochiladi.
           </p>
         </div>
       </div>
@@ -57,9 +57,9 @@ export function VideoPlayer({ signedUrl, youtubeId, watermark, locked }: VideoPl
           <svg viewBox="0 0 24 24">
             <path d="M4 6h16v12H4zM10 9l5 3-5 3z" />
           </svg>
-          <div style={{ fontWeight: 700, fontSize: 17 }}>Video tez orada</div>
+          <div style={{ fontWeight: 700, fontSize: 17 }}>Video yozuvi hali biriktirilmagan</div>
           <p style={{ opacity: 0.7, fontSize: 13, maxWidth: 320 }}>
-            Kirishingiz ochiq. Video hali yuklanmagan (R2/Bunny ulanganda bu yerda o&apos;ynaydi).
+            Darsning matnli materiallari ochiq. Ustoz video yozuvini biriktirgach shu yerda ko&apos;rinadi.
           </p>
         </div>
       )}

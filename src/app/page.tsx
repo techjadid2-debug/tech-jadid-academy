@@ -6,6 +6,8 @@ import { ModuleIcon } from "@/components/course/ModuleIcon";
 import { LessonCard } from "@/components/course/LessonCard";
 import { AI_FOUNDATIONS, formatUzs } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
+import { getCurrentUser } from "@/lib/auth";
+import { getPublicCohortSummary } from "@/lib/cohorts";
 
 const WHO_FOR = [
   { ico: "🎓", h: "Talaba", p: "Kod bilmasangiz ham muammo emas. AI'ni ishlatishni, prompt yozishni va birinchi mahsulotingizni qurishni o'rganasiz." },
@@ -27,14 +29,26 @@ const FAQ = [
   { q: "Har dars qancha davom etadi?", a: "75–90 daqiqa: qisqa nazariya, ustoz namoyishi, yo'nalish bo'yicha amaliyot va savol-javob. Har dars ko'rsatsa bo'ladigan natija bilan tugaydi." },
   { q: "Qaysi AI tool'lardan foydalanamiz?", a: "ChatGPT, Claude, Gemini, rasm/video generatorlar (Midjourney, Veo, Flux), vibe coding uchun Claude/Cursor/Bolt kabi zamonaviy vositalar. Bepul va pullik variantlar solishtiriladi." },
   { q: "Kurs oxirida nimaga ega bo'laman?", a: "6 ta real artefakt: prompt kutubxonasi, media to'plami, ishlaydigan vibe-coded app, AI Telegram bot, AI workflow hujjati va yakuniy portfolio sahifa." },
+  { q: "Darsni o'tkazib yuborsam nima bo'ladi?", a: "Jadval va mavjud yozuvlar shaxsiy kabinetda ko'rinadi. Video yozuvi hali biriktirilmagan darslarda matnli materiallardan foydalanasiz; aniq qayta ko'rish tartibi guruh ochilishidan oldin ustoz bilan kelishiladi." },
+  { q: "AI vositalari uchun alohida to'lov kerakmi?", a: "Kurs narxi tashqi AI servislarining pullik tariflarini o'z ichiga olmaydi. Darslarda bepul variantlar ko'rsatiladi, pullik vosita zarur bo'lsa xarajat oldindan aytiladi." },
+  { q: "Sertifikat beriladimi?", a: "Sertifikat funksiyasi platformada bor, lekin berilish shartlari hali e'lon qilinmagan. Qaror qabul qilishdan oldin ustozdan aniq talablarni so'rang." },
 ];
 
 export default async function LandingPage() {
-  const course = (await getCourseAsync(AI_FOUNDATIONS.slug)) ?? AI_FOUNDATIONS;
+  const [loadedCourse, user, cohort] = await Promise.all([
+    getCourseAsync(AI_FOUNDATIONS.slug),
+    getCurrentUser(),
+    getPublicCohortSummary(AI_FOUNDATIONS.slug),
+  ]);
+  const course = loadedCourse ?? AI_FOUNDATIONS;
+  const previewLesson = course.modules.flatMap((module) => module.lessons).find((lesson) => lesson.isPreview);
 
   return (
     <>
-      <SiteNav />
+      <SiteNav
+        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }}
+        secondaryCta={!user ? { href: "/login", label: "Kirish" } : undefined}
+      />
       <Reveal />
       <main id="top">
         {/* HERO */}
@@ -57,10 +71,26 @@ export default async function LandingPage() {
             <div className="stat"><div className="num">6</div><div className="lbl">Artefakt</div></div>
           </div>
           <div className="hero-cta">
-            <Link href="/register" className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+            <Link href={user ? "/dashboard" : "/register"} className="btn btn-primary">{user ? "Kabinetga o'tish →" : "Ro'yxatdan o'tish →"}</Link>
             <Link href="/kurs/ai-asoslari" className="btn btn-ghost">Dasturni ko&apos;rish</Link>
+            {previewLesson && <Link href={`/learn/${course.slug}/${previewLesson.order}`} className="btn btn-ghost">Bepul 1-dars</Link>}
           </div>
-          <p className="hint" style={{ marginTop: 16 }}>Ariza yuboring, ustoz bilan guruh va tarifni kelishing · 1-dars hoziroq bepul</p>
+          <p className="hint" style={{ marginTop: 16 }}>
+            {cohort ? `${cohort.title}: ${formatCohortStart(cohort.startsAt)} boshlanadi.` : "Yangi guruhning aniq kuni va vaqti to'lovdan oldin siz bilan kelishiladi."}
+          </p>
+        </section>
+
+        <section className="course-format" aria-labelledby="format-title">
+          <div className="format-inner">
+            <div className="wf-eyebrow">Qanday o&apos;qiladi</div>
+            <h2 id="format-title">Arizadan jonli darsgacha — tushunarli yo&apos;l.</h2>
+            <div className="format-grid">
+              <article><span>1</span><b>Hisob va ariza</b><p>Login va parolni o&apos;zingiz tanlaysiz. Kontakt orqali ustoz siz bilan bog&apos;lanadi.</p></article>
+              <article><span>2</span><b>Guruh va to&apos;lov</b><p>Aniq sana, vaqt va tarif kelishiladi. Shundan keyin shaxsiy checkout tayyorlanadi.</p></article>
+              <article><span>3</span><b>8 hafta amaliyot</b><p>Haftasiga 2 ta, 75–90 daqiqalik Google Meet darsi va platformadagi 16 dars.</p></article>
+            </div>
+            <p className="format-status">{cohort ? `Ochiq guruh: ${cohort.title} · ${formatCohortStart(cohort.startsAt)}` : "Hozircha ochiq guruh sanasi e'lon qilinmagan. Pul o'tkazishdan oldin jadvalni ustoz bilan tasdiqlang."}</p>
+          </div>
         </section>
 
         {/* WHO FOR */}
@@ -95,7 +125,13 @@ export default async function LandingPage() {
               </div>
               <div className={`lessons${m.lessons.length === 2 ? " solo" : ""}`}>
                 {m.lessons.map((l) => (
-                  <LessonCard key={l.order} lesson={l} reveal unlocked={false} />
+                  <LessonCard
+                    key={l.order}
+                    lesson={l}
+                    reveal
+                    unlocked={l.isPreview}
+                    href={l.isPreview ? `/learn/${course.slug}/${l.order}` : undefined}
+                  />
                 ))}
               </div>
             </div>
@@ -117,11 +153,11 @@ export default async function LandingPage() {
                 </div>
                 <p className="price-note">{p.note}</p>
                 <Link
-                  href="/register"
+                  href={user ? "/dashboard" : "/register"}
                   className="btn btn-primary"
                   style={{ width: "100%", justifyContent: "center" }}
                 >
-                  Ro&apos;yxatdan o&apos;tish
+                  {user ? "Kabinetga o'tish" : "Ro'yxatdan o'tish"}
                 </Link>
               </div>
             ))}
@@ -185,11 +221,22 @@ export default async function LandingPage() {
         {/* FINAL CTA */}
         <section className="final-cta" id="cta">
           <h2>Boshlashga tayyormisiz?</h2>
-          <p>Keyingi guruh tez orada boshlanadi. O&apos;rin cheklangan — bizning jamoaga qo&apos;shiling.</p>
-          <Link href="/register" className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+          <p>{cohort ? `${cohort.title} ${formatCohortStart(cohort.startsAt)} boshlanadi.` : "Guruh sanasi hali e'lon qilinmagan. Ariza qoldiring — aniq jadval va tarif to'lovdan oldin kelishiladi."}</p>
+          <Link href={user ? "/dashboard" : "/register"} className="btn btn-primary">{user ? "Kabinetga o'tish →" : "Ro'yxatdan o'tish →"}</Link>
         </section>
       </main>
       <SiteFooter />
     </>
   );
+}
+
+function formatCohortStart(value: string) {
+  return new Intl.DateTimeFormat("uz-UZ", {
+    timeZone: "Asia/Tashkent",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

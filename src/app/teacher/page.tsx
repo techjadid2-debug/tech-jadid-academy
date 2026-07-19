@@ -8,6 +8,9 @@ import { AI_FOUNDATIONS } from "@/lib/course-data";
 import { listActionableRequests } from "@/lib/enrollment-requests";
 import { approveManualPayment, createCohort, prepareApplicationPayment } from "./actions";
 import { getPendingPaymentForRequest } from "@/lib/payments/db";
+import { CopyButton } from "@/components/CopyButton";
+import { env, isCheckoutConfigured } from "@/lib/env";
+import { telegramConfigured } from "@/lib/telegram";
 
 export default async function TeacherPage({
   searchParams,
@@ -23,6 +26,8 @@ export default async function TeacherPage({
     listActionableRequests(AI_FOUNDATIONS.slug),
   ]);
   const paymentByRequest = new Map((await Promise.all(requests.map(async (request) => [request.id, await getPendingPaymentForRequest(request.id)] as const))).filter((entry) => entry[1]));
+  const telegramReady = telegramConfigured();
+  const checkoutUrl = (paymentId: string) => `${env.appUrl || ""}/checkout?order=${paymentId}`;
 
   return (
     <>
@@ -41,12 +46,25 @@ export default async function TeacherPage({
         </div>
 
         {saved && <Notice tone="success">✓ Amal bajarildi.</Notice>}
-        {error && <Notice tone="error">⚠️ Amal bajarilmadi. Ma&apos;lumotlarni tekshirib qayta urining.</Notice>}
+        {error && <Notice tone="error">⚠️ {errorMessage(error)}</Notice>}
         {order && (
           <Notice tone="success">
-            To&apos;lov buyurtmasi tayyor: <Link href={`/checkout?order=${order}`}>o&apos;quvchi checkout havolasi</Link>
+            <span>To&apos;lov buyurtmasi tayyor. Havolani faqat shu o&apos;quvchiga yuboring. </span>
+            <CopyButton value={checkoutUrl(order)} />
           </Notice>
         )}
+
+        <section className="panel launch-checklist" aria-labelledby="launch-title">
+          <div>
+            <div className="page-eyebrow">Ishga tushirish nazorati</div>
+            <h2 id="launch-title">Qabul oqimi holati</h2>
+          </div>
+          <div className="launch-checklist-grid">
+            <CheckItem ready={cohorts.length > 0} title="Jonli guruh" text={cohorts.length > 0 ? `${cohorts.length} ta guruh tayyor` : "Birinchi dars sanasi bilan guruh yarating"} />
+            <CheckItem ready={isCheckoutConfigured} title="To'lov" text={isCheckoutConfigured ? "Karta va chek yuborish kanali tayyor" : "PAYMENT_CARD_NUMBER, PAYMENT_CARD_HOLDER va chek yuborish kanalini sozlang"} />
+            <CheckItem ready={telegramReady} title="Ariza xabari" text={telegramReady ? "Yangi arizalar Telegram orqali yuboriladi" : "Bot tokeni, username va TELEGRAM_ADMIN_IDS yetishmaydi; arizalarni shu sahifadan tekshiring"} />
+          </div>
+        </section>
 
         <section className="teacher-grid" style={{ marginBottom: 24 }}>
           {cohorts.map((cohort) => (
@@ -88,7 +106,7 @@ export default async function TeacherPage({
                     <div className="teacher-payment-form">
                       <span className="badge badge-green">Checkout tayyor</span>
                       {paymentByRequest.get(request.id) && <>
-                        <Link href={`/checkout?order=${paymentByRequest.get(request.id)!.id}`} className="btn btn-ghost">Checkout</Link>
+                        <CopyButton value={checkoutUrl(paymentByRequest.get(request.id)!.id)} label="Checkout havolasini nusxalash" />
                         <form action={approveManualPayment}>
                           <input type="hidden" name="paymentId" value={paymentByRequest.get(request.id)!.id} />
                           <button className="btn btn-primary">Chekni tasdiqlash</button>
@@ -103,7 +121,7 @@ export default async function TeacherPage({
                         {cohorts.filter((cohort) => cohort.status !== "completed").map((cohort) => <option key={cohort.id} value={cohort.id}>{cohort.title}</option>)}
                       </select>
                       <select name="kind" defaultValue="lifetime"><option value="lifetime">Bir martalik</option><option value="monthly">Oyma-oy</option></select>
-                      <button type="submit" className="btn btn-primary" disabled={cohorts.length === 0}>Checkout tayyorlash</button>
+                      <button type="submit" className="btn btn-primary" disabled={cohorts.length === 0 || !isCheckoutConfigured}>Checkout tayyorlash</button>
                     </form>
                   )}
                 </div>
@@ -129,4 +147,20 @@ function statusLabel(status: string) {
   if (status === "contacted") return "aloqaga olindi";
   if (status === "payment_pending") return "to'lov kutilmoqda";
   return "yangi ariza";
+}
+
+function CheckItem({ ready, title, text }: { ready: boolean; title: string; text: string }) {
+  return (
+    <article className={ready ? "ready" : "missing"}>
+      <span aria-hidden>{ready ? "✓" : "!"}</span>
+      <div><b>{title}</b><p>{text}</p></div>
+    </article>
+  );
+}
+
+function errorMessage(error: string) {
+  if (error === "payment-config") return "Checkout yaratilmadi: avval karta va chek yuborish kanalini sozlang.";
+  if (error === "no-service-key") return "Supabase service key sozlanmagan.";
+  if (error === "forbidden") return "Bu guruhni boshqarishga ruxsatingiz yo'q.";
+  return "Amal bajarilmadi. Ma'lumotlarni tekshirib qayta urining.";
 }
