@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test src/**/*.test.ts",
     "bootstrap:admin": "node --env-file=.env.local --import=tsx scripts/bootstrap-admin.ts",
     "seed:content": "node --env-file=.env.local --import=tsx scripts/seed-course-content.ts",
+    "seed:quizzes": "node --env-file=.env.local --import=tsx scripts/seed-course-quizzes.ts",
     "telegram:set-webhook": "node --env-file=.env.local --import=tsx scripts/set-telegram-webhook.ts"
   },
   "dependencies": {

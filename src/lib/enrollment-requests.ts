@@ -4,15 +4,14 @@ import type { EnrollmentRequest, EnrollmentRequestStatus } from "./types";
 import { env, isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
-import { grantAccess } from "@/lib/access";
 import { sendTelegramMessage, telegramConfigured } from "@/lib/telegram";
 
 // ============================================================================
 // Ro'yxatdan o'tish arizalari — dual-mode (access.ts andozasi bo'yicha).
 //
 // REAL rejim: Supabase `enrollment_requests` jadvali (o'qish RLS, yozish
-// service role). Tasdiqlash/rad etish faqat admin panel orqali (service role
-// talab qiladi — access.ts dagi boshqa admin amallari kabi).
+// service role). Ariza qabul qilinishi hali kursga kirish bermaydi: ustoz
+// aloqaga chiqadi, payment order yaratadi, faqat paid bo'lgach kirish ochiladi.
 // DEMO rejim: `tj_enroll_request` cookie'da JSON ro'yxat — faqat holatni
 // ko'rsatish uchun; tasdiqlash demo rejimda mavjud emas (admin ham service
 // role talab qiladi).
@@ -24,6 +23,8 @@ export interface PendingRequestWithProfile extends EnrollmentRequest {
   login: string | null;
   fullName: string | null;
 }
+
+export type ActionableRequestWithProfile = PendingRequestWithProfile;
 
 /** O'quvchining shu kursga (hali qaror qilinmagan yoki oxirgi) arizasi. */
 export async function getRequestStatus(userId: string, courseSlug: string): Promise<EnrollmentRequest | null> {
@@ -86,14 +87,14 @@ async function notifyAdminsOfNewRequest(requestId: string, displayName: string, 
   ].join("\n");
   const keyboard = {
     inline_keyboard: [[
-      { text: "✅ Tasdiqlash", callback_data: `enroll:approve:${requestId}` },
+      { text: "📞 Aloqaga olish", callback_data: `enroll:approve:${requestId}` },
       { text: "❌ Rad etish", callback_data: `enroll:reject:${requestId}` },
     ]],
   };
   await Promise.all(env.telegramAdminIds.map((adminId) => sendTelegramMessage(adminId, text, keyboard)));
 }
 
-/** Telegram (bot) orqali ariza qarorini qabul qiladi — tasdiqlansa kirishni ham ochadi. */
+/** Telegram orqali arizani aloqaga olish yoki rad etish. Kirish faqat payment paid bo'lgach ochiladi. */
 export async function decideRequestFromTelegram(
   requestId: string,
   approve: boolean,
@@ -112,16 +113,18 @@ export async function decideRequestFromTelegram(
 
   const { error: updateError } = await admin
     .from("enrollment_requests")
-    .update({ status: approve ? "approved" : "rejected", decided_at: new Date().toISOString() })
+    .update({
+      status: approve ? "contacted" : "rejected",
+      contacted_at: approve ? new Date().toISOString() : null,
+      decided_at: approve ? null : new Date().toISOString(),
+    })
     .eq("id", requestId);
   if (updateError) {
     console.error("[enrollment-requests] decideRequestFromTelegram failed", updateError);
     return null;
   }
 
-  const userId = request.user_id as string;
-  if (approve) await grantAccess(userId, courseSlug, "admin");
-  return { userId, courseSlug };
+  return { userId: request.user_id as string, courseSlug };
 }
 
 /** Admin panel uchun — bitta kursning kutilayotgan arizalari (profil bilan). */
@@ -166,7 +169,48 @@ export async function listPendingRequests(courseSlug: string): Promise<PendingRe
   });
 }
 
-/** Arizani tasdiqlaydi/rad etadi (kirish huquqini berish chaqiruvchida). */
+/** Ustoz kabineti uchun pending/contacted/payment_pending arizalar. */
+export async function listActionableRequests(courseSlug: string): Promise<ActionableRequestWithProfile[]> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return [];
+  const courseId = await getCourseId(courseSlug);
+  if (!courseId) return [];
+  const { data, error } = await admin
+    .from("enrollment_requests")
+    .select("id, user_id, status, contact, created_at, cohort_id, selected_kind")
+    .eq("course_id", courseId)
+    .in("status", ["pending", "contacted", "payment_pending"])
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("[enrollment-requests] actionable list failed", error);
+    return [];
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+  const userIds = rows.map((row) => row.user_id as string);
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, login, full_name")
+    .in("id", userIds);
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id as string, profile]));
+  return rows.map((row) => {
+    const profile = profileById.get(row.user_id as string);
+    return {
+      id: row.id as string,
+      userId: row.user_id as string,
+      courseSlug,
+      status: row.status as EnrollmentRequestStatus,
+      contact: (row.contact as string | null) ?? null,
+      cohortId: (row.cohort_id as string | null) ?? null,
+      selectedKind: (row.selected_kind as EnrollmentRequest["selectedKind"]) ?? null,
+      createdAt: row.created_at as string,
+      login: (profile?.login as string | undefined) ?? null,
+      fullName: (profile?.full_name as string | undefined) ?? null,
+    };
+  });
+}
+
+/** Arizani aloqaga oladi yoki rad etadi. To'lovsiz kirish bermaydi. */
 export async function decideRequest(requestId: string, decidedBy: string, approve: boolean): Promise<string | null> {
   const admin = createSupabaseAdmin();
   if (!admin) return null;
@@ -179,7 +223,12 @@ export async function decideRequest(requestId: string, decidedBy: string, approv
 
   const { error } = await admin
     .from("enrollment_requests")
-    .update({ status: approve ? "approved" : "rejected", decided_at: new Date().toISOString(), decided_by: decidedBy })
+    .update({
+      status: approve ? "contacted" : "rejected",
+      contacted_at: approve ? new Date().toISOString() : null,
+      decided_at: approve ? null : new Date().toISOString(),
+      decided_by: decidedBy,
+    })
     .eq("id", requestId);
   if (error) {
     console.error("[enrollment-requests] decideRequest failed", error);
@@ -197,7 +246,7 @@ async function getDbRequestStatus(userId: string, courseSlug: string): Promise<E
   if (!courseId) return null;
   const { data, error } = await admin
     .from("enrollment_requests")
-    .select("id, status, contact, created_at")
+    .select("id, status, contact, created_at, cohort_id, selected_kind")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .order("created_at", { ascending: false })
@@ -211,6 +260,8 @@ async function getDbRequestStatus(userId: string, courseSlug: string): Promise<E
     courseSlug,
     status: data.status as EnrollmentRequestStatus,
     contact: (data.contact as string | null) ?? null,
+    cohortId: (data.cohort_id as string | null) ?? null,
+    selectedKind: (data.selected_kind as EnrollmentRequest["selectedKind"]) ?? null,
     createdAt: data.created_at as string,
   };
 }

@@ -11,13 +11,20 @@ import { getCourseAsync } from "@/lib/course";
 import { getUserBadges, getUserPoints } from "@/lib/gamification";
 import { getCertificate } from "@/lib/certificates";
 import { logout } from "@/app/login/actions";
+import { getStudentCohortContext, isTeacher } from "@/lib/cohorts";
+import { getPendingPaymentForUser } from "@/lib/payments/db";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/dashboard");
 
   const enrollments = await getEnrollments(user.id);
-  const [points, badges] = await Promise.all([getUserPoints(user.id), getUserBadges(user.id)]);
+  const [points, badges, cohortContext, pendingPayment] = await Promise.all([
+    getUserPoints(user.id),
+    getUserBadges(user.id),
+    getStudentCohortContext(user.id, AI_FOUNDATIONS.slug),
+    getPendingPaymentForUser(user.id, AI_FOUNDATIONS.slug),
+  ]);
   const hasCourseEnrollment = enrollments.some((e) => e.courseSlug === AI_FOUNDATIONS.slug);
   const requestStatus = hasCourseEnrollment ? null : await getRequestStatus(user.id, AI_FOUNDATIONS.slug);
 
@@ -56,6 +63,9 @@ export default async function DashboardPage() {
             <p className="hint">{user.phone || user.email}{user.role === "admin" ? " · admin" : ""}</p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            {isTeacher(user) && (
+              <Link href="/teacher" className="btn btn-ghost">Ustoz kabineti</Link>
+            )}
             {user.role === "admin" && (
               <Link href="/admin" className="btn btn-ghost">Admin panel</Link>
             )}
@@ -64,6 +74,24 @@ export default async function DashboardPage() {
             </form>
           </div>
         </div>
+
+        {cohortContext?.nextSession && (
+          <section className="panel student-live-card">
+            <div className="page-eyebrow">Keyingi jonli dars · {cohortContext.cohort.title}</div>
+            <h2>{String(cohortContext.nextSession.order).padStart(2, "0")} · {cohortContext.nextSession.title}</h2>
+            <p className="hint">{new Date(cohortContext.nextSession.sessionStartsAt!).toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short" })}</p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <Link href={`/learn/${AI_FOUNDATIONS.slug}/${cohortContext.nextSession.order}`} className="btn btn-primary">Dars sahifasi →</Link>
+              {cohortContext.cohort.telegramUrl && <a href={cohortContext.cohort.telegramUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">Telegram guruh</a>}
+            </div>
+          </section>
+        )}
+
+        {cohortContext && cohortContext.announcements.length > 0 && (
+          <section className="student-announcements" aria-label="Guruh e'lonlari">
+            {cohortContext.announcements.slice(0, 3).map((announcement) => <article key={announcement.id}><b>{announcement.title}</b><p>{announcement.body}</p><span className="hint">{new Date(announcement.publishedAt).toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}</span></article>)}
+          </section>
+        )}
 
         {/* Streak / ball / nishonlar (real rejimda faollik bo'lsa) */}
         {points && (
@@ -94,12 +122,19 @@ export default async function DashboardPage() {
 
         {cards.filter(Boolean).length === 0 ? (
           <div className="panel" style={{ textAlign: "center", padding: 40 }}>
-            {requestStatus?.status === "pending" ? (
+            {requestStatus?.status === "payment_pending" && pendingPayment ? (
+              <>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>💳</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Shaxsiy buyurtmangiz tayyor</div>
+                <p className="hint" style={{ marginBottom: 20 }}>Chek tasdiqlangach jonli guruh va dars jadvali avtomatik ochiladi.</p>
+                <Link href={`/checkout?order=${pendingPayment.id}`} className="btn btn-primary">To&apos;lovga o&apos;tish →</Link>
+              </>
+            ) : requestStatus?.status === "pending" || requestStatus?.status === "contacted" ? (
               <>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
-                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz ko&apos;rib chiqilmoqda</div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>{requestStatus.status === "contacted" ? "Ustoz siz bilan aloqaga chiqmoqda" : "Arizangiz ko'rib chiqilmoqda"}</div>
                 <p className="hint" style={{ marginBottom: 20 }}>
-                  Ustoz tasdiqlagach barcha darslar, testlar va vazifalar ochiladi. Hozircha 1-darsni bepul ko&apos;rishingiz mumkin.
+                  Guruh va tarif aniqlangach shu yerda shaxsiy checkout paydo bo&apos;ladi. Hozircha 1-darsni bepul ko&apos;rishingiz mumkin.
                 </p>
                 <Link href={`/learn/${AI_FOUNDATIONS.slug}/1`} className="btn btn-primary">1-darsni ko&apos;rish →</Link>
               </>

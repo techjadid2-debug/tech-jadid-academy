@@ -1,26 +1,28 @@
 # Tech Jadid Akademiyasi
 
-O'zbek tilidagi amaliy AI ta'lim platformasi. Ilova Next.js 16, Supabase va
-Vercel bilan ishlaydi. Xaridor karta orqali o'tkazma qiladi, chekni admin
-Telegram'iga yuboradi, admin esa login-parol yaratib kursga kirishni ochadi.
+O'zbek tilidagi 8 haftalik jonli + platforma AI kursi. Ilova Next.js 16,
+Supabase va Vercel bilan ishlaydi. O'quvchi hisob ochib ariza yuboradi, ustoz
+guruh va tarifni biriktiradi, chek tasdiqlangach kurs hamda cohort jadvali ochiladi.
 
 ## Hozirgi Oqim
 
 1. Tashrif buyuruvchi kurs dasturi, jonli dars formati va tariflarni ko'radi.
-2. Xaridor tarifni tanlaydi, karta rekvizitlarini oladi va chekni Telegram'ga yuboradi.
-3. Admin `/admin` sahifasida o'quvchi uchun login/parol yaratadi hamda uni Telegram guruhiga qo'shadi.
-4. Bir martalik to'lov 2 oylik kursni 600 000 so'mga, oyma-oy tarif esa har oy 350 000 so'mga ochadi.
-5. Ikkinchi oy to'lovi admin tomonidan tasdiqlanganda kirish yana 30 kunga uzaytiriladi.
+2. Ustoz `/teacher` sahifasida 8 haftalik cohort yaratadi, arizani guruh va tarifga bog'lab shaxsiy checkout tayyorlaydi.
+3. O'quvchi karta orqali o'tkazadi va buyurtmaga bog'langan Telegram havolasi orqali chek yuboradi.
+4. Telegram yoki ustoz tasdig'i payment, enrollment va cohort membership'ni birga faollashtiradi.
+5. Darslar haftasiga ikki marta `release_at` bo'yicha ochiladi; test progressni o'lchaydi, keyingi darsni bloklamaydi.
 
 Kurs Google Meet'da kechki jonli darslar sifatida o'tadi. Platformada har dars uchun
 slaydlar, nazariy va amaliy qism, tayyor promptlar, uy vazifasi hamda mavzudan keyingi
-test bor. AI sandbox hozircha faol emas. Progress, gamifikatsiya va sertifikat Supabase
-real rejimi yoqilganda ishlaydi.
+test bor. AI sandbox Gateway sozlanganda faqat tanlangan darslarda kunlik limit
+bilan ishlaydi. Ustoz e'lon, jadval, Meet, YouTube yozuvi, davomat va homework
+feedbackini boshqaradi. Sertifikat uchun 16 dars, kamida 80% quiz va 80+ ballik
+ustoz tasdiqlagan capstone talab qilinadi.
 
 ## Sozlash
 
 1. Supabase SQL Editor'da migratsiyalarni ketma-ket qo'llang:
-   `0001_init.sql` dan `0009_lesson_assessments.sql` gacha, keyin `supabase/seed.sql`.
+   `0001_init.sql` dan `0013_cohorts_and_paid_enrollment.sql` gacha, keyin `supabase/seed.sql`.
 2. `.env.local` va Vercel Environment Variables'ga quyidagilarni kiriting:
 
    ```bash
@@ -33,7 +35,12 @@ real rejimi yoqilganda ishlaydi.
    PAYMENT_TELEGRAM_URL=https://t.me/your_username
    ```
 
-3. Bir marta administrator yarating:
+3. Kontentni DB'ga sinxronlang va bir marta administrator yarating:
+
+   ```bash
+   npm run seed:content
+   npm run seed:quizzes
+   ```
 
    ```bash
    ADMIN_LOGIN=admin ADMIN_INITIAL_PASSWORD='kuchli-parol' npm run bootstrap:admin
@@ -69,7 +76,26 @@ npm run build
 2. Telegram bot ishlatilsa, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`,
    `TELEGRAM_ADMIN_IDS` va `TELEGRAM_WEBHOOK_SECRET`ni kiriting, so'ng
    `npm run telegram:set-webhook`ni bir marta ishga tushiring.
-3. Production deploydan keyin bitta test buyurtma qiling: karta rekvizitlari,
-   Telegram havolasi, admin hisob yaratishi, login va 1–8/to'liq kirishni tekshiring.
-4. To'lov tasdiqlangach o'quvchini Telegram guruhiga qo'shing, login/parolini yuboring
-   va birinchi Google Meet vaqtini xabardor qiling.
+3. Production deploydan keyin bitta test ariza va buyurtma qiling: karta rekvizitlari,
+   order'ga bog'langan Telegram havolasi, paid aktivatsiya va jadval bo'yicha kirishni tekshiring.
+4. `/teacher`da cohort yarating. 16 dars haftasiga ikki martadan avtomatik jadval qilinadi; kerak bo'lsa Meet va vaqtlarni tahrirlang.
+5. Test arizasi bilan shaxsiy checkout, Telegram chek tasdig'i, cohort membership,
+   schedule access, homework va ustoz feedbackini end-to-end tekshiring.
+6. Jonli darsdan keyin YouTube `unlisted` video ID'sini cohort darsiga kiriting.
+   Har playerda o'quvchining `TJ-XXXXXXXX` watermark'i yuradi. Bu tarqatishni
+   tiyadi, lekin YouTube havolasini mutlaq DRM darajasida yashirmaydi.
+
+## Ustoz va cohort
+
+- Admin `/admin`da mavjud loginni `instructor` roliga o'tkazadi.
+- Admin yoki ustoz `/teacher`da cohort, jadval, e'lon va to'lovlarni boshqaradi.
+- Ustoz `/admin/homework` orqali `submitted` va AI baholagan vazifalarni tekshiradi.
+- O'quvchi kabinetida keyingi jonli dars, Telegram guruh, e'lonlar va checkout ko'rinadi.
+
+## Vercel
+
+Lokal Vercel CLI eski bo'lsa, agentic imkoniyatlar va Next.js 16 mosligi uchun yangilang:
+
+```bash
+npm i -g vercel@latest
+```

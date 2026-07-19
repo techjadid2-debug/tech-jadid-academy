@@ -10,11 +10,16 @@ import { canAccessLesson, getActiveEnrollment } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
 import { getCompleted, percentOf } from "@/lib/progress";
 import { LessonSlides } from "@/components/lesson/LessonSlides";
-import { LessonAssessment } from "@/components/lesson/LessonAssessment";
 import { HomeworkPanel } from "@/components/lesson/HomeworkPanel";
-import { getAssessmentForLesson, getAssessmentStatus } from "@/lib/lesson-assessments";
 import { getSubmission } from "@/lib/homework";
 import { completeAndNext, unmarkComplete } from "@/app/learn/actions";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { LessonContent } from "@/components/lesson/LessonContent";
+import { LessonQuiz } from "@/components/lesson/LessonQuiz";
+import { AiSandbox } from "@/components/lesson/AiSandbox";
+import { getLessonQuiz, getQuizAnswers } from "@/lib/quiz";
+import { signVideoUrl, watermarkText } from "@/lib/video";
+import { getStudentCohortContext } from "@/lib/cohorts";
 
 export default async function LearnPage({
   params,
@@ -36,7 +41,10 @@ export default async function LearnPage({
 
   const user = await getCurrentUser();
   const lessons = allLessons(course);
-  const access = user ? await canAccessLesson(user.id, slug, order) : false;
+  const [access, cohortContext] = await Promise.all([
+    user ? canAccessLesson(user.id, slug, order) : false,
+    user ? getStudentCohortContext(user.id, slug) : null,
+  ]);
   const accessibleOrders = new Set(user ? await Promise.all(lessons.map(async (item) => (await canAccessLesson(user.id, slug, item.order)) ? item.order : 0)) : []);
 
   // Preview bo'lmagan darsni ko'rish uchun kirish shart.
@@ -54,8 +62,11 @@ export default async function LearnPage({
   const prev = lessons[idx - 1];
   const next = lessons[idx + 1];
 
-  const assessment = access && user ? await getAssessmentForLesson(slug, order) : [];
-  const assessmentStatus = access && user ? await getAssessmentStatus(user.id, slug, order) : null;
+  const quiz = access && user ? await getLessonQuiz(slug, order) : [];
+  const quizAnswers = access && user ? await getQuizAnswers(user.id, quiz.map((question) => question.id)) : new Map();
+  const cohortLesson = cohortContext?.lessons.find((item) => item.order === order);
+  const signedVideo = access && user ? signVideoUrl(lesson.videoKey, user.id) : { url: null, expiresAt: 0 };
+  const youtubeId = cohortLesson?.youtubeId ?? lesson.youtubeId;
   const taskBlock = lesson.content?.find(
     (b): b is Extract<LessonContentBlock, { type: "task" }> => b.type === "task",
   );
@@ -104,7 +115,28 @@ export default async function LearnPage({
                 ))}
               </div>
 
-              {(access || lesson.isPreview) && <LessonSlides lesson={lesson} />}
+              {(access || lesson.isPreview) && (
+                <>
+                  <div style={{ marginTop: 24 }}>
+                    <VideoPlayer
+                      signedUrl={signedVideo.url}
+                      youtubeId={youtubeId}
+                      watermark={user ? watermarkText(user) : "TECH JADID · PREVIEW"}
+                      locked={false}
+                    />
+                  </div>
+                  {cohortLesson?.sessionStartsAt && (
+                    <div className="panel" style={{ marginTop: 14 }}>
+                      <b>Jonli dars: {new Date(cohortLesson.sessionStartsAt).toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" })}</b>
+                      {cohortLesson.meetUrl && (
+                        <a href={cohortLesson.meetUrl} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ marginTop: 12 }}>Google Meet&apos;ga kirish</a>
+                      )}
+                    </div>
+                  )}
+                  <LessonSlides lesson={lesson} />
+                  <LessonContent blocks={lesson.content ?? []} />
+                </>
+              )}
 
               {locked ? (
                 <div className="panel" style={{ marginTop: 24 }}>
@@ -114,24 +146,21 @@ export default async function LearnPage({
                       ? "Arizangiz ustoz tomonidan ko'rib chiqilmoqda. Tasdiqlangach dars ochiladi."
                       : lockReason === "rejected"
                         ? "Arizangiz hozircha tasdiqlanmadi. Qayta murojaat qiling."
-                        : lockReason === "sequential"
-                          ? "Bu darsga o'tish uchun avvalgi darsning 10 savolli testini kamida 9/10 bilan yakunlang."
+                        : lockReason === "scheduled"
+                          ? "Bu dars jonli guruh jadvali bo'yicha hali ochilmagan. Ochilish vaqtini kabinetdagi jadvaldan ko'ring."
                           : lockReason === "partial"
                             ? "Bu dars qolgan qismga tegishli — ustozga murojaat qiling."
-                            : "Kursga ro'yxatdan o'ting — ustoz tasdiqlagach dars ochiladi."}
+                            : "Kursga ariza yuboring — to'lov tasdiqlangach dars jadvali ochiladi."}
                   </p>
                   <Link href={`/kurs/${slug}#narx`} className="btn btn-primary">
-                    {lockReason === "sequential" ? "Testni topshirish →" : "Kurs sahifasiga o'tish →"}
+                    {lockReason === "scheduled" ? "Kabinetdagi jadval →" : "Kurs sahifasiga o'tish →"}
                   </Link>
                 </div>
               ) : (
                 access && (
                   <>
-                  {assessmentStatus && <LessonAssessment
-                    slug={slug} order={order}
-                    questions={assessment.map(({ id, prompt, options }) => ({ id, prompt, options }))}
-                    status={assessmentStatus}
-                  />}
+                  <LessonQuiz slug={slug} order={order} questions={quiz} answers={quizAnswers} />
+                  {lesson.sandboxEnabled && <AiSandbox slug={slug} order={order} />}
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 24 }}>
                     <form action={completeAndNext}>
                       <input type="hidden" name="slug" value={slug} />
@@ -228,7 +257,7 @@ export default async function LearnPage({
   );
 }
 
-type LockReason = "no-enrollment" | "pending" | "rejected" | "partial" | "sequential";
+type LockReason = "no-enrollment" | "pending" | "rejected" | "partial" | "scheduled";
 
 /** Dars nega qulflanganini aniqlaydi — foydalanuvchiga to'g'ri xabar ko'rsatish uchun. */
 async function getLockReason(userId: string, slug: string, order: number): Promise<LockReason> {
@@ -240,5 +269,5 @@ async function getLockReason(userId: string, slug: string, order: number): Promi
     return "no-enrollment";
   }
   if (enrollment.unlockedThrough !== null && order > enrollment.unlockedThrough) return "partial";
-  return "sequential";
+  return "scheduled";
 }

@@ -5,6 +5,8 @@ import type { HomeworkStatus, HomeworkSubmission, Lesson } from "./types";
 import { isSupabaseConfigured, isSandboxConfigured, env } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getLessonId } from "@/lib/supabase/db";
+import { issueCertificateIfEligible } from "@/lib/certificates";
+import type { AppUser } from "@/lib/auth";
 
 // ============================================================================
 // Uy vazifasi — matn + fayl + havola. Topshirilganda AI darhol dastlabki
@@ -33,6 +35,8 @@ export interface SubmitHomeworkInput {
   text: string;
   link: string;
   file: File | null;
+  filePath?: string;
+  fileName?: string;
 }
 
 const gradeResultSchema = jsonSchema<{ score: number; feedback: string }>({
@@ -67,11 +71,16 @@ export async function submitHomework(
 
   let filePath: string | null = null;
   let fileName: string | null = null;
+  const lessonId = isSupabaseConfigured ? await getLessonId(slug, order) : null;
+  const expectedPrefix = lessonId ? `${userId}/${lessonId}/` : "";
+  if (input.filePath && expectedPrefix && input.filePath.startsWith(expectedPrefix)) {
+    filePath = input.filePath.slice(0, 500);
+    fileName = (input.fileName ?? "fayl").trim().slice(0, 180);
+  }
   if (input.file && input.file.size > 0 && isSupabaseConfigured) {
     if (input.file.size > MAX_FILE_BYTES) throw new Error("Fayl hajmi 10MB dan oshmasligi kerak.");
     const admin = createSupabaseAdmin();
     if (admin) {
-      const lessonId = await getLessonId(slug, order);
       const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${userId}/${lessonId ?? order}/${Date.now()}-${safeName}`;
       const { error } = await admin.storage.from("homework").upload(path, input.file, {
@@ -120,11 +129,23 @@ export interface ReviewQueueItem extends HomeworkSubmission {
   lessonTitle: string;
 }
 
-export async function listSubmissionsForReview(slug: string): Promise<ReviewQueueItem[]> {
+export async function listSubmissionsForReview(slug: string, viewer?: AppUser): Promise<ReviewQueueItem[]> {
   const admin = createSupabaseAdmin();
   if (!admin) return [];
 
-  const { data, error } = await admin
+  let allowedStudentIds: string[] | null = null;
+  if (viewer?.role === "instructor") {
+    const { data: teaching } = await admin.from("cohort_members").select("cohort_id")
+      .eq("user_id", viewer.id).eq("member_role", "instructor").neq("status", "removed");
+    const cohortIds = (teaching ?? []).map((row) => row.cohort_id as string);
+    if (cohortIds.length === 0) return [];
+    const { data: students } = await admin.from("cohort_members").select("user_id")
+      .in("cohort_id", cohortIds).eq("member_role", "student").neq("status", "removed");
+    allowedStudentIds = [...new Set((students ?? []).map((row) => row.user_id as string))];
+    if (allowedStudentIds.length === 0) return [];
+  }
+
+  let query = admin
     .from("homework_submissions")
     .select(
       `id, user_id, content_text, link_url, file_path, file_name, status,
@@ -132,8 +153,10 @@ export async function listSubmissionsForReview(slug: string): Promise<ReviewQueu
        lessons!inner ( order, title, modules!inner ( courses!inner ( slug ) ) )`,
     )
     .eq("lessons.modules.courses.slug", slug)
-    .in("status", ["ai_graded", "reviewed"])
+    .in("status", ["submitted", "ai_graded", "reviewed"])
     .order("created_at", { ascending: false });
+  if (allowedStudentIds) query = query.in("user_id", allowedStudentIds);
+  const { data, error } = await query;
   if (error) {
     console.error("[homework] listSubmissionsForReview failed", error);
     return [];
@@ -181,6 +204,11 @@ export async function reviewSubmission(
 ): Promise<boolean> {
   const admin = createSupabaseAdmin();
   if (!admin) return false;
+  const { data: target } = await admin
+    .from("homework_submissions")
+    .select("user_id, lessons ( order, modules ( courses ( slug ) ) )")
+    .eq("id", submissionId)
+    .maybeSingle();
   const { error } = await admin
     .from("homework_submissions")
     .update({
@@ -194,6 +222,10 @@ export async function reviewSubmission(
   if (error) {
     console.error("[homework] reviewSubmission failed", error);
     return false;
+  }
+  const lesson = target?.lessons as unknown as { order: number; modules: { courses: { slug: string } } } | null;
+  if (target && lesson?.order === 16 && score >= 80) {
+    await issueCertificateIfEligible(target.user_id as string, lesson.modules.courses.slug);
   }
   return true;
 }

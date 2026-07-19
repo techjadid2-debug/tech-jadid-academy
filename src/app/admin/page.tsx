@@ -13,10 +13,10 @@ import {
   createStudentAccount,
   deleteQuizQuestion,
   renewMonthlyAccess,
-  allowLessonAfterAssessment,
   approveEnrollmentRequest,
   rejectEnrollmentRequest,
   resetStudentPassword,
+  setInstructorRole,
   updateLesson,
   updatePricing,
   upsertQuizQuestion,
@@ -98,7 +98,7 @@ export default async function AdminPage({
         <section className="panel" id="arizalar" style={{ marginBottom: 16 }}>
           <b>Ro&apos;yxatdan o&apos;tish arizalari {pendingRequests.length > 0 && `(${pendingRequests.length})`}</b>
           <p className="hint" style={{ margin: "8px 0 14px" }}>
-            O&apos;quvchi ro&apos;yxatdan o&apos;tgach shu yerda ko&apos;rinadi. Tasdiqlasangiz 1-darsdan boshlab ketma-ket ochiladi.
+            Arizani aloqaga oling, so&apos;ng ustoz kabinetida guruh va shaxsiy checkout tayyorlang. To&apos;lovsiz kurs ochilmaydi.
           </p>
           {pendingRequests.length === 0 ? (
             <p className="hint">Hozircha kutilayotgan ariza yo&apos;q.</p>
@@ -118,7 +118,7 @@ export default async function AdminPage({
                     <form action={approveEnrollmentRequest}>
                       <input type="hidden" name="requestId" value={r.id} />
                       <input type="hidden" name="courseSlug" value={r.courseSlug} />
-                      <button type="submit" className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 13 }}>Tasdiqlash</button>
+                      <button type="submit" className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 13 }}>Aloqaga olish</button>
                     </form>
                     <form action={rejectEnrollmentRequest}>
                       <input type="hidden" name="requestId" value={r.id} />
@@ -163,18 +163,17 @@ export default async function AdminPage({
                   <input name="login" placeholder="o'quvchi login" required />
                   <button type="submit" className="btn btn-ghost" style={{ marginTop: 8 }}>Kirishni 30 kunga uzaytirish</button>
                 </form>
-                <form action={allowLessonAfterAssessment} id="test-ruxsati" className="field" style={{ marginBottom: 0 }}>
-                  <label>Testdan keyin ustoz ruxsati</label>
-                  <input type="hidden" name="courseSlug" value={AI_FOUNDATIONS.slug} />
-                  <input name="login" placeholder="o'quvchi login" required />
-                  <input name="order" type="number" min={1} max={16} placeholder="dars raqami" required style={{ marginTop: 8 }} />
-                  <button type="submit" className="btn btn-ghost" style={{ marginTop: 8 }}>Keyingi darsga ruxsat berish</button>
-                </form>
                 <form action={resetStudentPassword} className="field" style={{ marginBottom: 0 }}>
                   <label>Parolni yangilash</label>
                   <input name="login" placeholder="o'quvchi login" required />
                   <input name="password" type="password" minLength={8} placeholder="yangi parol" required style={{ marginTop: 8 }} />
                   <button type="submit" className="btn btn-ghost" style={{ marginTop: 8 }}>Parolni saqlash</button>
+                </form>
+                <form action={setInstructorRole} className="field" style={{ marginBottom: 0 }}>
+                  <label>Ustoz rolini boshqarish</label>
+                  <input name="login" placeholder="foydalanuvchi login" required />
+                  <select name="role" defaultValue="instructor" style={{ marginTop: 8 }}><option value="instructor">Ustoz qilish</option><option value="student">O&apos;quvchiga qaytarish</option></select>
+                  <button type="submit" className="btn btn-ghost" style={{ marginTop: 8 }}>Rolni saqlash</button>
                 </form>
               </div>
             </>
@@ -333,6 +332,11 @@ function LessonEditor({ lesson: l }: { lesson: AdminLesson }) {
             <textarea name={`row${kind}`} rows={2} defaultValue={row(kind)} />
           </div>
         ))}
+        <div className="field" style={{ marginBottom: 8 }}>
+          <label>Boyitilgan kontent (JSON bloklar)</label>
+          <textarea name="contentJson" rows={10} defaultValue={JSON.stringify(l.content, null, 2)} spellCheck={false} />
+          <span className="hint">paragraph, heading, image, callout, steps, prompt va task bloklari qo&apos;llanadi.</span>
+        </div>
         <div className="admin-checkboxes" style={{ display: "flex", gap: 18, alignItems: "center", margin: "10px 0" }}>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
             <input type="checkbox" name="isPreview" defaultChecked={l.isPreview} /> Bepul preview

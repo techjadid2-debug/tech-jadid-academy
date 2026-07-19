@@ -68,7 +68,8 @@ export function verifyVideoToken(
   return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
 
-/** Watermark uchun ko'rsatiladigan matn (foydalanuvchini identifikatsiya qiladi). */
-export function watermarkText(user: { phone?: string; email?: string; id: string }): string {
-  return user.phone || user.email || user.id;
+/** Watermark uchun maxfiy kontaktni chiqarmaydigan, barqaror maxsus o'quvchi ID. */
+export function watermarkText(user: { id: string }): string {
+  const code = crypto.createHash("sha256").update(user.id).digest("hex").slice(0, 8).toUpperCase();
+  return `TECH JADID · TJ-${code}`;
 }

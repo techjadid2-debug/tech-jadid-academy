@@ -11,7 +11,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 // ============================================================================
 // Ochiq ro'yxatdan o'tish — o'quvchi o'zi hisob yaratadi, lekin bu darsларga
 // kirish bermaydi: kursga "ariza" (enrollment_requests, pending) yaratiladi.
-// Ustoz admin panelda tasdiqlagach kirish ochiladi (grantAccess).
+// Ustoz cohort va payment order tayyorlaydi; kirish faqat payment paid bo'lgach ochiladi.
 // ============================================================================
 
 function readForm(formData: FormData) {

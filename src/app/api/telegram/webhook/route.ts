@@ -144,9 +144,9 @@ async function handleEnrollmentCallback(callback: NonNullable<TelegramUpdate["ca
     await answerTelegramCallback(callback.id, "Ariza topilmadi yoki allaqachon ko'rib chiqilgan.");
     return;
   }
-  await answerTelegramCallback(callback.id, approve ? "Tasdiqlandi." : "Rad etildi.");
+  await answerTelegramCallback(callback.id, approve ? "Aloqaga olish uchun belgilandi." : "Rad etildi.");
   if (callback.message) {
-    const label = approve ? "✅ TASDIQLANDI" : "❌ RAD ETILDI";
+    const label = approve ? "📞 ALOQAGA OLINDI" : "❌ RAD ETILDI";
     await editTelegramMessage(
       callback.message.chat.id,
       callback.message.message_id,
@@ -199,6 +199,9 @@ async function handleCallback(update: TelegramUpdate) {
       console.error("[telegram] manual payment rejection failed", error);
       await answerTelegramCallback(callback.id, "Server xatosi. Qayta urinib ko'ring.");
       return;
+    }
+    if (payment.enrollmentRequestId) {
+      await admin.from("enrollment_requests").update({ status: "contacted" }).eq("id", payment.enrollmentRequestId);
     }
     if (payment.telegramChatId) await sendTelegramMessage(payment.telegramChatId, "To'lov tasdiqlanmadi. Iltimos, admin bilan bog'laning.");
     await answerTelegramCallback(callback.id, "Buyurtma rad etildi.");

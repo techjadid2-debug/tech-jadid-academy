@@ -21,7 +21,7 @@ export interface AppUser {
   name: string;
   email: string;
   phone: string;
-  role: "student" | "admin";
+  role: "student" | "instructor" | "admin";
 }
 
 const USER_COOKIE = "tj_user";
@@ -57,7 +57,7 @@ async function getSupabaseUser(): Promise<AppUser | null> {
     name: profile.full_name || user.email || "O'quvchi",
     email: user.email ?? "",
     phone: profile.phone ?? "",
-    role: profile.role === "admin" ? "admin" : "student",
+    role: profile.role === "admin" || profile.role === "instructor" ? profile.role : "student",
   };
 }
 

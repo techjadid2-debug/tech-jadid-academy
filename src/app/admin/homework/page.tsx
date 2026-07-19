@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { AI_FOUNDATIONS } from "@/lib/course-data";
 import { listSubmissionsForReview, getHomeworkFileUrl, type ReviewQueueItem } from "@/lib/homework";
 import { reviewHomeworkSubmission } from "../actions";
+import { isTeacher } from "@/lib/cohorts";
 
 export default async function AdminHomeworkPage({
   searchParams,
@@ -15,15 +16,15 @@ export default async function AdminHomeworkPage({
 
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin/homework");
-  if (user.role !== "admin") redirect("/dashboard");
+  if (!isTeacher(user)) redirect("/dashboard");
 
-  const submissions = await listSubmissionsForReview(AI_FOUNDATIONS.slug);
-  const pending = submissions.filter((s) => s.status === "ai_graded");
+  const submissions = await listSubmissionsForReview(AI_FOUNDATIONS.slug, user);
+  const pending = submissions.filter((s) => s.status === "submitted" || s.status === "ai_graded");
   const reviewed = submissions.filter((s) => s.status === "reviewed");
 
   return (
     <>
-      <SiteNav links={[]} cta={{ href: "/admin", label: "Admin panel" }} />
+      <SiteNav links={[]} cta={{ href: user.role === "admin" ? "/admin" : "/teacher", label: user.role === "admin" ? "Admin panel" : "Ustoz kabineti" }} />
       <main className="shell">
         <div className="page-eyebrow">Admin panel</div>
         <h1 className="page-title">Uy vazifalarini baholash</h1>
@@ -46,7 +47,7 @@ export default async function AdminHomeworkPage({
         <div className="panel" style={{ marginBottom: 16 }}>
           <b>Ko&apos;rib chiqilishi kerak {pending.length > 0 && `(${pending.length})`}</b>
           {pending.length === 0 ? (
-            <p className="hint" style={{ marginTop: 10 }}>Hozircha AI baholagan, tasdiq kutayotgan topshiriq yo&apos;q.</p>
+            <p className="hint" style={{ marginTop: 10 }}>Hozircha tekshirishni kutayotgan topshiriq yo&apos;q.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
               {await Promise.all(pending.map((s) => renderSubmission(s)))}
@@ -76,7 +77,7 @@ async function renderSubmission(s: ReviewQueueItem) {
         <span style={{ fontWeight: 600 }}>{s.studentName ?? "Noma'lum"} {s.studentLogin && <span className="hint">@{s.studentLogin}</span>}</span>
         <span className="hint">Dars {String(s.lessonOrder).padStart(2, "0")} · {s.lessonTitle}</span>
         <span className={`badge ${s.status === "reviewed" ? "badge-green" : "badge-blue"}`}>
-          {s.status === "reviewed" ? `✓ ${s.teacherScore}/100` : `AI: ${s.aiScore}/100`}
+          {s.status === "reviewed" ? `✓ ${s.teacherScore}/100` : s.aiScore === null ? "Ustoz kutilyapti" : `AI: ${s.aiScore}/100`}
         </span>
       </summary>
 

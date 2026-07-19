@@ -24,7 +24,7 @@ const PORTFOLIO = [
 
 const FAQ = [
   { q: "Kod yozishni bilishim shartmi?", a: "Yo'q. Kurs \"vibe coding\" asosida — natijani AI'ga tasvirlab berasiz, kod AI tomonidan yoziladi. Boshlang'ich va tajribali ishtirokchilar bir xil darajada boshlaydi." },
-  { q: "Har dars qancha davom etadi?", a: "120 daqiqa — 40 daqiqa nazariy, 55 daqiqa amaliy lab, qolgani yakun va uy vazifasi. Har dars oxirida ko'rsatsa bo'ladigan natija bilan tugaydi." },
+  { q: "Har dars qancha davom etadi?", a: "75–90 daqiqa: qisqa nazariya, ustoz namoyishi, yo'nalish bo'yicha amaliyot va savol-javob. Har dars ko'rsatsa bo'ladigan natija bilan tugaydi." },
   { q: "Qaysi AI tool'lardan foydalanamiz?", a: "ChatGPT, Claude, Gemini, rasm/video generatorlar (Midjourney, Veo, Flux), vibe coding uchun Claude/Cursor/Bolt kabi zamonaviy vositalar. Bepul va pullik variantlar solishtiriladi." },
   { q: "Kurs oxirida nimaga ega bo'laman?", a: "6 ta real artefakt: prompt kutubxonasi, media to'plami, ishlaydigan vibe-coded app, AI Telegram bot, AI workflow hujjati va yakuniy portfolio sahifa." },
 ];
@@ -60,7 +60,7 @@ export default async function LandingPage() {
             <Link href="/register" className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
             <Link href="/kurs/ai-asoslari" className="btn btn-ghost">Dasturni ko&apos;rish</Link>
           </div>
-          <p className="hint" style={{ marginTop: 16 }}>Ro&apos;yxatdan o&apos;ting, ustoz tasdiqlagach darslar ochiladi · 1-dars hoziroq bepul</p>
+          <p className="hint" style={{ marginTop: 16 }}>Ariza yuboring, ustoz bilan guruh va tarifni kelishing · 1-dars hoziroq bepul</p>
         </section>
 
         {/* WHO FOR */}
@@ -105,7 +105,7 @@ export default async function LandingPage() {
         {/* NARX / QIYMAT */}
         <section className="pricing" id="narx">
           <h2>Qatnashish</h2>
-          <p className="sub">Ro&apos;yxatdan o&apos;ting — ustoz tasdiqlagach guruhga qo&apos;shilasiz, 2 oylik dastur to&apos;liq ochiladi.</p>
+          <p className="sub">Ariza yuboring — ustoz aloqaga chiqadi. To&apos;lov tasdiqlangach guruh va 8 haftalik dars jadvali ochiladi.</p>
           <div className="price-grid">
             {course.pricing.map((p) => (
               <div key={p.kind} className={`price-card${p.kind === "lifetime" ? " featured" : ""}`}>

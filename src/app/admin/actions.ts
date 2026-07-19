@@ -8,10 +8,10 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseAsync } from "@/lib/course";
 import { grantAccess, unlockFullAccess } from "@/lib/access";
 import { getCourseId } from "@/lib/supabase/db";
-import type { LessonRow, PricingKind } from "@/lib/types";
-import { grantAssessmentOverride } from "@/lib/lesson-assessments";
+import type { LessonContentBlock, LessonRow, PricingKind } from "@/lib/types";
 import { decideRequest } from "@/lib/enrollment-requests";
 import { reviewSubmission } from "@/lib/homework";
+import { isTeacher } from "@/lib/cohorts";
 
 // ============================================================================
 // Admin CMS server action'lari. Har biri clientga ishonmaydi:
@@ -29,6 +29,15 @@ async function requireAdminDb() {
     redirect("/admin?error=no-service-key");
   }
   return admin;
+}
+
+async function requireTeacherDb() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/admin/homework");
+  if (!isTeacher(user)) redirect("/dashboard");
+  const admin = createSupabaseAdmin();
+  if (!admin) redirect("/admin/homework?error=no-service-key");
+  return { admin, user };
 }
 
 /** Barcha kontent ko'rinadigan sahifalarni yangilaydi. */
@@ -184,23 +193,23 @@ export async function resetStudentPassword(formData: FormData) {
   redirect("/admin?saved=password#oquvchi");
 }
 
-/** Uch urinishdan keyin ustoz qarori bilan keyingi darsni ochadi. */
-export async function allowLessonAfterAssessment(formData: FormData) {
+/** Mavjud hisobga instructor rolini beradi yoki student roliga qaytaradi. */
+export async function setInstructorRole(formData: FormData) {
   const admin = await requireAdminDb();
   const login = normalizeLogin(String(formData.get("login") ?? ""));
-  const order = Number(formData.get("order") ?? 0);
-  const courseSlug = String(formData.get("courseSlug") ?? "");
-  if (!login || !courseSlug || !Number.isInteger(order) || order < 1 || order > 16) redirect("/admin?error=account-invalid#test-ruxsati");
-  const { data: profile } = await admin.from("profiles").select("id").eq("login", login).maybeSingle();
-  if (!profile) redirect("/admin?error=account-invalid#test-ruxsati");
-  await grantAssessmentOverride(profile.id, courseSlug, order);
-  revalidateContent();
-  redirect("/admin?saved=test-ruxsati#test-ruxsati");
+  const role = formData.get("role") === "instructor" ? "instructor" : "student";
+  if (!login) redirect("/admin?error=account-invalid#oquvchi");
+  const { data: profile } = await admin.from("profiles").select("id, role").eq("login", login).maybeSingle();
+  if (!profile || profile.role === "admin") redirect("/admin?error=account-invalid#oquvchi");
+  const { error } = await admin.from("profiles").update({ role }).eq("id", profile.id);
+  if (error) redirect("/admin?error=account-save#oquvchi");
+  revalidatePath("/teacher");
+  redirect("/admin?saved=role#oquvchi");
 }
 
 // ---- Ro'yxatdan o'tish arizalari --------------------------------------------
 
-/** Kursga arizani tasdiqlaydi va kirishni ochadi (1-darsdan ketma-ket). */
+/** Arizani aloqaga oladi. Kirish faqat teacher checkout payment paid bo'lgach ochiladi. */
 export async function approveEnrollmentRequest(formData: FormData) {
   await requireAdminDb();
   const admin = await getCurrentUser();
@@ -210,9 +219,8 @@ export async function approveEnrollmentRequest(formData: FormData) {
 
   const userId = await decideRequest(requestId, admin.id, true);
   if (!userId) redirect("/admin?error=account-save#arizalar");
-  await grantAccess(userId, courseSlug, "admin");
   revalidateContent();
-  redirect("/admin?saved=request-approved#arizalar");
+  redirect("/admin?saved=request-contacted#arizalar");
 }
 
 /** Arizani rad etadi (kirish berilmaydi). */
@@ -232,14 +240,25 @@ export async function rejectEnrollmentRequest(formData: FormData) {
 
 /** Ustoz AI bergan bahoni ko'rib chiqib tahrirlaydi/tasdiqlaydi. */
 export async function reviewHomeworkSubmission(formData: FormData) {
-  await requireAdminDb();
-  const admin = await getCurrentUser();
+  const { admin: db, user: teacher } = await requireTeacherDb();
   const submissionId = String(formData.get("submissionId") ?? "");
   const score = Number(formData.get("score") ?? 0);
   const feedback = String(formData.get("feedback") ?? "");
-  if (!submissionId || !admin || !Number.isFinite(score)) redirect("/admin/homework?error=invalid");
+  if (!submissionId || !Number.isFinite(score)) redirect("/admin/homework?error=invalid");
 
-  const ok = await reviewSubmission(submissionId, admin.id, score, feedback);
+  if (teacher.role === "instructor") {
+    const { data: submission } = await db.from("homework_submissions").select("user_id").eq("id", submissionId).maybeSingle();
+    const { data: teaching } = await db.from("cohort_members").select("cohort_id")
+      .eq("user_id", teacher.id).eq("member_role", "instructor").neq("status", "removed");
+    const cohortIds = (teaching ?? []).map((row) => row.cohort_id as string);
+    const { data: student } = submission && cohortIds.length
+      ? await db.from("cohort_members").select("user_id").in("cohort_id", cohortIds)
+          .eq("user_id", submission.user_id).eq("member_role", "student").neq("status", "removed").limit(1).maybeSingle()
+      : { data: null };
+    if (!student) redirect("/admin/homework?error=forbidden");
+  }
+
+  const ok = await reviewSubmission(submissionId, teacher.id, score, feedback);
   if (!ok) redirect("/admin/homework?error=save");
   revalidateContent();
   redirect(`/admin/homework?saved=1#hw-${submissionId}`);
@@ -280,6 +299,20 @@ function rowsFromForm(formData: FormData): LessonRow[] {
   }));
 }
 
+function contentFromForm(formData: FormData): LessonContentBlock[] | null {
+  const raw = String(formData.get("contentJson") ?? "[]").trim();
+  if (raw.length > 100_000) return null;
+  try {
+    const value = JSON.parse(raw) as unknown;
+    if (!Array.isArray(value)) return null;
+    const allowed = new Set(["paragraph", "heading", "image", "callout", "steps", "prompt", "task"]);
+    if (!value.every((block) => block && typeof block === "object" && allowed.has(String((block as { type?: unknown }).type)))) return null;
+    return value as LessonContentBlock[];
+  } catch {
+    return null;
+  }
+}
+
 export async function updateLesson(formData: FormData) {
   const admin = await requireAdminDb();
   const id = String(formData.get("id") ?? "");
@@ -289,6 +322,8 @@ export async function updateLesson(formData: FormData) {
   const videoKey = String(formData.get("videoKey") ?? "").trim();
   const youtubeId = String(formData.get("youtubeId") ?? "").trim();
   const durationSec = Math.max(0, Math.round(Number(formData.get("durationSec") ?? 0)));
+  const content = contentFromForm(formData);
+  if (!content) redirect("/admin?error=invalid");
 
   const { error } = await admin
     .from("lessons")
@@ -300,6 +335,7 @@ export async function updateLesson(formData: FormData) {
       is_preview: formData.get("isPreview") === "on",
       sandbox_enabled: formData.get("sandboxEnabled") === "on",
       rows: rowsFromForm(formData),
+      content,
     })
     .eq("id", id);
   if (error) {

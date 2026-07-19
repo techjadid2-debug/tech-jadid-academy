@@ -24,8 +24,10 @@ export async function submitHomeworkAction(formData: FormData) {
   const link = String(formData.get("link") ?? "");
   const fileEntry = formData.get("file");
   const file = fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
+  const filePath = String(formData.get("filePath") ?? "");
+  const fileName = String(formData.get("fileName") ?? "");
 
-  await submitHomework(user.id, slug, order, found.lesson, found.module.title, course.title, { text, link, file });
+  await submitHomework(user.id, slug, order, found.lesson, found.module.title, course.title, { text, link, file, filePath, fileName });
 
   redirect(`/learn/${slug}/${order}#uy-vazifasi`);
 }

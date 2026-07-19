@@ -16,12 +16,14 @@ export function LessonQuiz({
   answers: Map<string, QuizAnswerState>;
 }) {
   if (questions.length === 0) return null;
+  const correctCount = questions.filter((question) => answers.get(question.id)?.isCorrect).length;
+  const mastery = Math.round((correctCount / questions.length) * 100);
 
   return (
     <div style={{ marginTop: 28 }}>
       <h2 style={{ fontSize: 19, fontWeight: 700, marginBottom: 4 }}>🧠 Bilimni tekshiring</h2>
       <p className="hint" style={{ marginBottom: 14 }}>
-        Har bir to&apos;g&apos;ri javob ball beradi (faqat birinchi urinishda).
+        Natija: {correctCount}/{questions.length} · {mastery}%. Sertifikat mezoni uchun kamida 80% talab qilinadi.
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 640 }}>
         {questions.map((q, i) => {

@@ -27,7 +27,7 @@ export default async function RegisterPage({
         <div className="page-eyebrow" style={{ textAlign: "center" }}>Ro&apos;yxatdan o&apos;tish</div>
         <h1 className="page-title" style={{ textAlign: "center" }}>Kursga ariza qoldiring</h1>
         <p className="page-sub" style={{ textAlign: "center" }}>
-          Ro&apos;yxatdan o&apos;tgach arizangiz ustozga yuboriladi. Tasdiqlangach barcha darslar, testlar va vazifalar ochiladi.
+          Ro&apos;yxatdan o&apos;tgach arizangiz ustozga yuboriladi. Guruh va tarif kelishilgach shaxsiy checkout tayyorlanadi; to&apos;lovdan keyin dars jadvali ochiladi.
           Birinchi dars — hoziroq bepul.
         </p>
 

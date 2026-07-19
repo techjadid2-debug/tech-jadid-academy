@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActiveEnrollment, canAccessLesson } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
 import { startCheckout, requestEnrollment } from "./actions";
+import { getPendingPaymentForUser } from "@/lib/payments/db";
 
 export default async function CoursePage({
   params,
@@ -27,6 +28,7 @@ export default async function CoursePage({
   const unlockedThrough = enrollment?.unlockedThrough ?? null;
   const isPartial = unlocked && unlockedThrough !== null;
   const requestStatus = user && !unlocked ? await getRequestStatus(user.id, slug) : null;
+  const pendingPayment = user && !unlocked ? await getPendingPaymentForUser(user.id, slug) : null;
   const allCourseLessons = allLessons(course);
   const accessibleOrders = new Set(user ? await Promise.all(allCourseLessons.map(async (lesson) => (await canAccessLesson(user.id, slug, lesson.order)) ? lesson.order : 0)) : []);
   const canOpenLesson = (order: number, isPreview: boolean) => isPreview || accessibleOrders.has(order);
@@ -44,7 +46,7 @@ export default async function CoursePage({
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <span className="badge badge-blue">16 dars</span>
             <span className="badge badge-gray">6 modul</span>
-            <span className="badge badge-gray">120 daq / dars</span>
+            <span className="badge badge-gray">75–90 daq / dars</span>
             {unlocked && !isPartial && <span className="badge badge-green">✓ Sizda ochiq</span>}
             {isPartial && <span className="badge badge-blue">1–{unlockedThrough}-darslar ochiq</span>}
           </div>
@@ -140,7 +142,7 @@ export default async function CoursePage({
                   <>
                     <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
                     <p className="hint" style={{ marginBottom: 18 }}>
-                      Ro&apos;yxatdan o&apos;ting — ustoz tasdiqlagach barcha darslar, testlar va vazifalar ochiladi. 1-dars hoziroq bepul.
+                      Ro&apos;yxatdan o&apos;ting — ustoz aloqaga chiqadi, guruh va to&apos;lovni kelishadi. 1-dars hoziroq bepul.
                     </p>
                     <Link href="/register" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
                       Ro&apos;yxatdan o&apos;tish →
@@ -153,12 +155,12 @@ export default async function CoursePage({
                       Bepul 1-darsni ko&apos;rish
                     </Link>
                   </>
-                ) : requestStatus?.status === "pending" ? (
+                ) : requestStatus?.status === "pending" || requestStatus?.status === "contacted" ? (
                   <>
                     <span className="badge badge-blue" style={{ marginBottom: 12 }}>Ko&apos;rib chiqilmoqda</span>
-                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz yuborildi</div>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>{requestStatus.status === "contacted" ? "Ustoz aloqaga chiqmoqda" : "Arizangiz yuborildi"}</div>
                     <p className="hint">
-                      Ustoz tasdiqlagach barcha darslar ochiladi. Birinchi darsni hozir ko&apos;rishingiz mumkin.
+                      Guruh va to&apos;lov aniqlangach kabinetingizda shaxsiy checkout chiqadi. Birinchi darsni hozir ko&apos;rishingiz mumkin.
                     </p>
                     <Link
                       href={`/learn/${course.slug}/${firstLesson.order}`}
@@ -167,6 +169,13 @@ export default async function CoursePage({
                     >
                       1-darsni ko&apos;rish
                     </Link>
+                  </>
+                ) : requestStatus?.status === "payment_pending" && pendingPayment ? (
+                  <>
+                    <span className="badge badge-green" style={{ marginBottom: 12 }}>To&apos;lovga tayyor</span>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Shaxsiy buyurtmangiz tayyor</div>
+                    <p className="hint" style={{ marginBottom: 14 }}>Chek tasdiqlangach kurs va jonli guruh avtomatik ochiladi.</p>
+                    <Link href={`/checkout?order=${pendingPayment.id}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>To&apos;lovga o&apos;tish →</Link>
                   </>
                 ) : requestStatus?.status === "rejected" ? (
                   <>
@@ -185,7 +194,7 @@ export default async function CoursePage({
                   <>
                     <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
                     <p className="hint" style={{ marginBottom: 18 }}>
-                      Ariza yuboring — ustoz tasdiqlagach darslar ochiladi.
+                      Ariza yuboring — ustoz siz bilan bog&apos;lanib guruh va to&apos;lovni kelishadi.
                     </p>
                     <form action={requestEnrollment}>
                       <input type="hidden" name="slug" value={course.slug} />

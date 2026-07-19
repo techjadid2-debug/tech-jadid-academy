@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import type { AccentColor, Course, Lesson, LessonRow, Module, PricingKind, PricingOption } from "./types";
+import type { AccentColor, Course, Lesson, LessonContentBlock, LessonRow, Module, PricingKind, PricingOption } from "./types";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabasePublic } from "@/lib/supabase/public";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
@@ -35,6 +35,7 @@ interface DbLessonRow {
   youtube_id: string | null;
   duration_sec: number;
   rows: unknown;
+  content: unknown;
   sandbox_enabled: boolean;
 }
 
@@ -71,7 +72,7 @@ async function getCourseDb(slug: string): Promise<Course | undefined> {
   if (!supabase) return undefined;
 
   const lessonFields = admin
-    ? "order, title, is_preview, video_key, youtube_id, duration_sec, rows, sandbox_enabled"
+    ? "order, title, is_preview, video_key, youtube_id, duration_sec, rows, content, sandbox_enabled"
     : "order, title, is_preview, youtube_id, duration_sec, rows, sandbox_enabled";
 
   const { data, error } = await supabase
@@ -116,9 +117,10 @@ async function getCourseDb(slug: string): Promise<Course | undefined> {
             youtubeId: l.youtube_id,
             durationSec: l.duration_sec,
             rows: Array.isArray(l.rows) ? l.rows : [],
-            content: staticCourse?.modules
-              .flatMap((module) => module.lessons)
-              .find((lesson) => lesson.order === l.order)?.content,
+            content: Array.isArray(l.content) && l.content.length > 0
+              ? l.content as LessonContentBlock[]
+              : staticCourse?.modules.flatMap((module) => module.lessons)
+                  .find((lesson) => lesson.order === l.order)?.content,
             sandboxEnabled: l.sandbox_enabled,
           }),
         ),
@@ -174,6 +176,7 @@ export interface AdminLesson {
   durationSec: number;
   sandboxEnabled: boolean;
   rows: LessonRow[];
+  content: LessonContentBlock[];
   quiz: AdminQuizQuestion[];
 }
 
@@ -213,7 +216,7 @@ export async function getCourseAdmin(slug: string): Promise<AdminCourse | null> 
       `id, slug, title,
        pricing_options ( id, kind, label, price_uzs, note ),
        modules ( id, order, code, title, accent,
-         lessons ( id, order, title, is_preview, video_key, youtube_id, duration_sec, rows, sandbox_enabled,
+         lessons ( id, order, title, is_preview, video_key, youtube_id, duration_sec, rows, content, sandbox_enabled,
            quiz_questions ( id, order, prompt, explanation, points,
              quiz_options ( id, order, text, is_correct ) ) ) )`,
     )
@@ -233,7 +236,7 @@ export async function getCourseAdmin(slug: string): Promise<AdminCourse | null> 
       id: string; order: number; code: string | null; title: string; accent: string | null;
       lessons: {
         id: string; order: number; title: string; is_preview: boolean; video_key: string | null;
-        youtube_id: string | null; duration_sec: number; rows: unknown; sandbox_enabled: boolean;
+        youtube_id: string | null; duration_sec: number; rows: unknown; content: unknown; sandbox_enabled: boolean;
         quiz_questions: {
           id: string; order: number; prompt: string; explanation: string | null; points: number;
           quiz_options: { id: string; order: number; text: string; is_correct: boolean }[];
@@ -274,6 +277,7 @@ export async function getCourseAdmin(slug: string): Promise<AdminCourse | null> 
             durationSec: l.duration_sec,
             sandboxEnabled: l.sandbox_enabled,
             rows: Array.isArray(l.rows) ? (l.rows as LessonRow[]) : [],
+            content: Array.isArray(l.content) ? (l.content as LessonContentBlock[]) : [],
             quiz: [...l.quiz_questions]
               .sort((a, b) => a.order - b.order)
               .map((q) => ({

@@ -96,7 +96,12 @@ export interface Payment {
 
 // ---- Ro'yxatdan o'tish arizasi ----
 
-export type EnrollmentRequestStatus = "pending" | "approved" | "rejected";
+export type EnrollmentRequestStatus =
+  | "pending"
+  | "contacted"
+  | "payment_pending"
+  | "approved"
+  | "rejected";
 
 export interface EnrollmentRequest {
   id: string;
@@ -104,6 +109,8 @@ export interface EnrollmentRequest {
   courseSlug: string;
   status: EnrollmentRequestStatus;
   contact: string | null;
+  cohortId?: string | null;
+  selectedKind?: PricingKind | null;
   createdAt: string;
 }
 

@@ -14,8 +14,12 @@ function material(
     { type: "heading", text: "Dars maqsadi" },
     { type: "paragraph", text: overview },
     { type: "callout", title: "Muhim nuqta", text: keyPoint },
+    { type: "heading", text: "Jonli dars rejasi" },
+    { type: "steps", title: "75–90 daqiqalik mashg'ulot", items: ["20 daqiqa: asosiy tushuncha va xavfsizlik chegaralari.", "25 daqiqa: ustozning ekrandagi real namoyishi.", "30 daqiqa: o'quvchi IT, kontent/media, biznes yoki ta'lim yo'nalishida mustaqil amaliyot qiladi.", "10 daqiqa: natijalarni ko'rib chiqish va savol-javob."] },
     { type: "steps", title: "Amaliy tartib", items: steps },
-    { type: "task", title: "Dars yakuni", text: task, checklist: ["Natijani saqladim.", "Kamida bitta yaxshilash nuqtasini topdim.", "Keyingi real vazifamda sinab ko'rish rejasini yozdim."] },
+    { type: "callout", title: "Yo'nalishni tanlang", text: "Topshiriqni o'zingizga yaqin yo'nalishda bajaring: IT, kontent/media, biznes yoki ta'lim. Baholash vosita nomiga emas, muammo, jarayon va tekshiriladigan natijaga qaraydi." },
+    { type: "prompt", title: "Ustozga savol tayyorlash", text: `Men ${title} mavzusida [yo'nalish] uchun [natija] tayyorlayapman. Hozirgi urinishim: [qisqa tavsif]. Menda [aniq to'siq] chiqdi. Natijani yaxshilash uchun qaysi bir qadamni o'zgartirishim kerak?` },
+    { type: "task", title: "Dars yakuni", text: task, checklist: ["Yo'nalishim va real vazifamni aniq tanladim.", "Natijani yoki havolani saqladim.", "Kamida bitta yaxshilash nuqtasini topdim.", "Natijani tekshirdim va ustozga kerak bo'lsa aniq savol yozdim."] },
   ];
 }
 

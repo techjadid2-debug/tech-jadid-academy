@@ -22,6 +22,8 @@ export interface PaymentRow {
   telegramChatId: number | null;
   createdAt: string;
   paidAt: string | null;
+  enrollmentRequestId: string | null;
+  cohortId: string | null;
 }
 
 interface DbPaymentRow {
@@ -37,10 +39,12 @@ interface DbPaymentRow {
   telegram_chat_id: number | null;
   created_at: string;
   paid_at: string | null;
+  enrollment_request_id: string | null;
+  cohort_id: string | null;
   courses: { slug: string } | null;
 }
 
-const SELECT = "id, user_id, amount_uzs, provider, provider_txn_id, status, kind, step, raw, telegram_chat_id, created_at, paid_at, courses(slug)";
+const SELECT = "id, user_id, amount_uzs, provider, provider_txn_id, status, kind, step, raw, telegram_chat_id, created_at, paid_at, enrollment_request_id, cohort_id, courses(slug)";
 
 function mapRow(r: DbPaymentRow): PaymentRow {
   return {
@@ -57,7 +61,123 @@ function mapRow(r: DbPaymentRow): PaymentRow {
     telegramChatId: r.telegram_chat_id ?? null,
     createdAt: r.created_at,
     paidAt: r.paid_at,
+    enrollmentRequestId: r.enrollment_request_id,
+    cohortId: r.cohort_id,
   };
+}
+
+/** Ariza bilan bog'langan, faqat shu foydalanuvchiga tegishli checkout buyurtmasi. */
+export async function getPaymentForCheckout(userId: string, orderId: string): Promise<PaymentRow | null> {
+  const payment = await getPaymentByOrderId(orderId);
+  return payment?.userId === userId && payment.status === "pending" ? payment : null;
+}
+
+/** Dashboard uchun foydalanuvchining oxirgi kutilayotgan buyurtmasi. */
+export async function getPendingPaymentForUser(userId: string, courseSlug: string): Promise<PaymentRow | null> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data, error } = await admin
+    .from("payments")
+    .select(SELECT.replace("courses(slug)", "courses!inner(slug)"))
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .eq("courses.slug", courseSlug)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[payments] pending payment lookup failed", error);
+    return null;
+  }
+  return data ? mapRow(data as unknown as DbPaymentRow) : null;
+}
+
+export async function getPendingPaymentForRequest(requestId: string): Promise<PaymentRow | null> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data, error } = await admin.from("payments").select(SELECT)
+    .eq("enrollment_request_id", requestId).eq("status", "pending")
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) return null;
+  return data ? mapRow(data as unknown as DbPaymentRow) : null;
+}
+
+/** Ustoz aloqasidan keyin shaxsiy payment order yaratadi; takroriy bosishda mavjudini qaytaradi. */
+export async function createPaymentForRequest(
+  requestId: string,
+  cohortId: string,
+  kind: Extract<PricingKind, "lifetime" | "monthly">,
+): Promise<string | null> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data: request, error: requestError } = await admin
+    .from("enrollment_requests")
+    .select("id, user_id, course_id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (requestError || !request || !["pending", "contacted", "payment_pending"].includes(request.status as string)) return null;
+
+  const { data: cohort } = await admin
+    .from("cohorts")
+    .select("id, course_id")
+    .eq("id", cohortId)
+    .eq("course_id", request.course_id)
+    .maybeSingle();
+  if (!cohort) return null;
+
+  const { data: existing } = await admin
+    .from("payments")
+    .select("id")
+    .eq("enrollment_request_id", requestId)
+    .eq("kind", kind)
+    .eq("step", 1)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const { data: pricing } = await admin
+    .from("pricing_options")
+    .select("price_uzs")
+    .eq("course_id", request.course_id)
+    .eq("kind", kind)
+    .maybeSingle();
+  if (!pricing) return null;
+
+  const { data: payment, error } = await admin
+    .from("payments")
+    .insert({
+      user_id: request.user_id,
+      course_id: request.course_id,
+      amount_uzs: pricing.price_uzs,
+      provider: "manual",
+      kind,
+      step: 1,
+      status: "pending",
+      enrollment_request_id: requestId,
+      cohort_id: cohortId,
+      raw: { created_from: "teacher_application" },
+    })
+    .select("id")
+    .single();
+  if (error || !payment) {
+    if (error?.code === "23505") {
+      const { data: raced } = await admin.from("payments").select("id")
+        .eq("enrollment_request_id", requestId).eq("kind", kind).eq("step", 1).eq("status", "pending").maybeSingle();
+      if (raced?.id) return raced.id as string;
+    }
+    console.error("[payments] create request order failed", error);
+    return null;
+  }
+  const { error: updateError } = await admin
+    .from("enrollment_requests")
+    .update({ status: "payment_pending", contacted_at: new Date().toISOString(), cohort_id: cohortId, selected_kind: kind })
+    .eq("id", requestId);
+  if (updateError) {
+    await admin.from("payments").delete().eq("id", payment.id).eq("status", "pending");
+    console.error("[payments] request status update failed", updateError);
+    return null;
+  }
+  return payment.id as string;
 }
 
 /** Buyurtma raqami (bizning payments.id) bo'yicha to'lovni topadi. */
@@ -139,5 +259,25 @@ export async function markPaymentPaid(
   }
   if (data !== true && payment.status === "pending") {
     throw new Error("To'lov holati o'zgargan, qayta urinib ko'ring");
+  }
+
+  // 0013 migratsiyasidagi trigger buni atomik qiladi. Quyidagi idempotent
+  // yozuvlar eski/kechikib migratsiya qilingan muhitda ham oqimni yakunlaydi.
+  if (payment.enrollmentRequestId) {
+    await admin.from("enrollment_requests").update({
+      status: "approved",
+      decided_at: new Date().toISOString(),
+      cohort_id: payment.cohortId,
+      selected_kind: payment.kind,
+    }).eq("id", payment.enrollmentRequestId);
+  }
+  if (payment.cohortId) {
+    await admin.from("cohort_members").upsert({
+      cohort_id: payment.cohortId,
+      user_id: payment.userId,
+      member_role: "student",
+      status: "active",
+      joined_at: new Date().toISOString(),
+    }, { onConflict: "cohort_id,user_id" });
   }
 }

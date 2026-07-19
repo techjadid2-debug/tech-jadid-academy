@@ -1,4 +1,5 @@
 import "server-only";
+import crypto from "node:crypto";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getLessonId } from "@/lib/supabase/db";
 
@@ -56,9 +57,13 @@ export async function getLessonQuiz(slug: string, order: number): Promise<QuizQu
     explanation: (q.explanation as string | null) ?? null,
     points: q.points as number,
     options: [...(q.quiz_options as { id: string; order: number; text: string }[])]
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => stableOptionRank(q.id as string, a.id) - stableOptionRank(q.id as string, b.id))
       .map((o) => ({ id: o.id, text: o.text })),
   }));
+}
+
+function stableOptionRank(questionId: string, optionId: string): number {
+  return Number.parseInt(crypto.createHash("sha256").update(`${questionId}:${optionId}`).digest("hex").slice(0, 8), 16);
 }
 
 /** Foydalanuvchining berilgan savollarga javob holati. */

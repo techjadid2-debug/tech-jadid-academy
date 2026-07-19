@@ -10,6 +10,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { AI_FOUNDATIONS } from "../src/lib/course-data";
+import { withLessonMaterials } from "../src/lib/lesson-materials";
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,19 +38,40 @@ async function main() {
 
   const moduleIdByOrder = new Map(modules.map((m) => [m.order as number, m.id as string]));
 
+  const contentCourse = withLessonMaterials(AI_FOUNDATIONS);
   let updated = 0;
-  for (const m of AI_FOUNDATIONS.modules) {
+  for (const m of contentCourse.modules) {
     const moduleId = moduleIdByOrder.get(m.order);
     if (!moduleId) {
       console.warn(`Modul topilmadi (order=${m.order}), o'tkazib yuborildi.`);
       continue;
     }
+
+    // `order` PostgREST'ning maxsus query parametri ham hisoblanadi. Shu sabab
+    // `.eq("order", ...)` `order=eq.N` ko'rinishida noto'g'ri talqin qilinadi;
+    // darslarni avval o'qib, keyin primary key orqali yangilaymiz.
+    const { data: storedLessons, error: lessonsErr } = await admin
+      .from("lessons")
+      .select("id, order")
+      .eq("module_id", moduleId);
+    if (lessonsErr || !storedLessons) {
+      console.error(`Modul ${m.order} darslari o'qilmadi:`, lessonsErr?.message);
+      continue;
+    }
+    const lessonIdByOrder = new Map(
+      storedLessons.map((lesson) => [lesson.order as number, lesson.id as string]),
+    );
+
     for (const l of m.lessons) {
+      const lessonId = lessonIdByOrder.get(l.order);
+      if (!lessonId) {
+        console.warn(`Dars topilmadi (module=${m.order}, order=${l.order}), o'tkazib yuborildi.`);
+        continue;
+      }
       const { error } = await admin
         .from("lessons")
-        .update({ rows: l.rows, sandbox_enabled: l.sandboxEnabled })
-        .eq("module_id", moduleId)
-        .eq("order", l.order);
+        .update({ rows: l.rows, content: l.content ?? [], sandbox_enabled: l.sandboxEnabled })
+        .eq("id", lessonId);
       if (error) {
         console.error(`Dars ${l.order} yangilanmadi:`, error.message);
         continue;

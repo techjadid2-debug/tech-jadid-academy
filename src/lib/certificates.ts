@@ -29,6 +29,26 @@ export async function issueCertificateIfEligible(
   const courseId = await getCourseId(courseSlug);
   if (!courseId) return null;
 
+  // Sertifikat faqat real yakuniy mezonlardan keyin: barcha darslar,
+  // kamida 80% quiz va ustoz tasdiqlagan capstone (16-dars).
+  const [{ count: lessonCount }, { count: completedCount }, { count: quizCount }, { count: correctCount }, { data: capstone }] = await Promise.all([
+    admin.from("lessons").select("id, modules!inner(course_id)", { head: true, count: "exact" }).eq("modules.course_id", courseId),
+    admin.from("lesson_progress").select("lesson_id, lessons!inner(modules!inner(course_id))", { head: true, count: "exact" })
+      .eq("user_id", userId).eq("completed", true).eq("lessons.modules.course_id", courseId),
+    admin.from("quiz_questions").select("id, lessons!inner(modules!inner(course_id))", { head: true, count: "exact" })
+      .eq("lessons.modules.course_id", courseId),
+    admin.from("quiz_answers").select("question_id, quiz_questions!inner(lessons!inner(modules!inner(course_id)))", { head: true, count: "exact" })
+      .eq("user_id", userId).eq("is_correct", true).eq("quiz_questions.lessons.modules.course_id", courseId),
+    admin.from("homework_submissions")
+      .select("teacher_score, lessons!inner(order, modules!inner(course_id))")
+      .eq("user_id", userId).eq("status", "reviewed").eq("lessons.order", 16)
+      .eq("lessons.modules.course_id", courseId).maybeSingle(),
+  ]);
+  const lessonReady = (lessonCount ?? 0) > 0 && completedCount === lessonCount;
+  const quizReady = (quizCount ?? 0) > 0 && ((correctCount ?? 0) / (quizCount ?? 1)) >= 0.8;
+  const capstoneReady = Number(capstone?.teacher_score ?? 0) >= 80;
+  if (!lessonReady || !quizReady || !capstoneReady) return null;
+
   const { data: existing } = await admin
     .from("certificates")
     .select("code")

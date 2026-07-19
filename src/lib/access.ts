@@ -4,7 +4,7 @@ import type { Enrollment, EnrollmentSource } from "./types";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
-import { isLessonCleared } from "@/lib/lesson-assessments";
+import { isCohortLessonReleased } from "@/lib/cohorts";
 
 // ============================================================================
 // Kirish nazorati (enrollment) — dual-mode.
@@ -46,12 +46,18 @@ export async function canAccessLesson(
   courseSlug: string,
   lessonOrder: number,
 ): Promise<boolean> {
+  const admin = createSupabaseAdmin();
+  if (admin) {
+    const { data: profile } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
+    if (profile?.role === "admin" || profile?.role === "instructor") return true;
+  }
   const enrollment = await getActiveEnrollment(userId, courseSlug);
   if (!enrollment) return false;
   if (enrollment.unlockedThrough !== null && lessonOrder > enrollment.unlockedThrough) return false;
-  // 1-darsdan keyin faqat avvalgi dars testi 90% bilan yopilganda (yoki ustoz
-  // ruxsat berganda) davom etiladi. Bu jonli guruhdagi nazorat oqimini saqlaydi.
-  return lessonOrder <= 1 || isLessonCleared(userId, courseSlug, lessonOrder - 1);
+  // Jonli guruhga biriktirilgan o'quvchida darslar cohort release_at bo'yicha
+  // ochiladi. Eski/admin enrollmentlarda cohort bo'lmasa oldingi xulq saqlanadi.
+  const released = await isCohortLessonReleased(userId, courseSlug, lessonOrder);
+  return released ?? true;
 }
 
 /** To'lov/berish natijasida kirishni ochadi (Server Action / webhook ichida). */
