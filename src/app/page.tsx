@@ -82,7 +82,7 @@ export default async function LandingPage() {
         <section className="pricing" id="kurslar">
           <h2>Ikki AI kursi</h2>
           <p className="sub">Har kurs mustaqil — birini yoki ikkalasini tanlashingiz mumkin. Har birida to&apos;liq dastur, video darslar va Free→Pro vosita tavsiyalari.</p>
-          <div className="grid-2" style={{ marginTop: 8 }}>
+          <div className="course-catalog-grid" style={{ marginTop: 8 }}>
             {cards.map(({ course, lessonCount, preview, lifetime, cohort }) => (
               <article className="panel course-catalog-card" key={course.slug}>
                 <div className="page-eyebrow">{course.title} · {course.year}</div>
@@ -103,7 +103,7 @@ export default async function LandingPage() {
                 <p className="hint" style={{ marginBottom: 16 }}>
                   {cohort ? `${cohort.title}: ${formatCohortStart(cohort.startsAt)} boshlanadi.` : "Guruh sanasi to'lovdan oldin siz bilan kelishiladi."}
                 </p>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div className="catalog-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <Link href={`/kurs/${course.slug}`} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", minWidth: 160 }}>
                     Dasturni ko&apos;rish →
                   </Link>

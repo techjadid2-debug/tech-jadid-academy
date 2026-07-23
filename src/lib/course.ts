@@ -137,8 +137,8 @@ async function getCourseDb(slug: string): Promise<Course | undefined> {
     slug: row.slug,
     title: row.title,
     subtitle: row.subtitle ?? "",
-    // "year" DB'da hali kuzatilmaydi (faqat kosmetik matn) — statik fallback.
-    year: "2026",
+    // "year" DB'da kuzatilmaydi (faqat kosmetik matn) — statik kursdan olamiz.
+    year: staticCourse?.year ?? "2026",
     modules,
     pricing,
   };
