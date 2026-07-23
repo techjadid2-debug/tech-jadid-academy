@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
-import { AI_FOUNDATIONS } from "@/lib/course-data";
+import { COURSES } from "@/lib/course-data";
 import { listSubmissionsForReview, getHomeworkFileUrl, type ReviewQueueItem } from "@/lib/homework";
 import { reviewHomeworkSubmission } from "../actions";
 import { isTeacher } from "@/lib/cohorts";
@@ -18,7 +18,7 @@ export default async function AdminHomeworkPage({
   if (!user) redirect("/login?next=/admin/homework");
   if (!isTeacher(user)) redirect("/dashboard");
 
-  const submissions = await listSubmissionsForReview(AI_FOUNDATIONS.slug, user);
+  const submissions = (await Promise.all(COURSES.map((c) => listSubmissionsForReview(c.slug, user)))).flat();
   const pending = submissions.filter((s) => s.status === "submitted" || s.status === "ai_graded");
   const reviewed = submissions.filter((s) => s.status === "reviewed");
 

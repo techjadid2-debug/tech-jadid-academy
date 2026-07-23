@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tech Jadid — Sun'iy Intellekt Asoslari",
+  title: "Tech Jadid — AI Video Creator & AI Builder",
   description:
-    "O'zbek tilida amaliy AI ta'limi. 16 darslik kurs: prompt engineering, media generatsiya, vibe coding va monetizatsiya.",
+    "O'zbek tilida amaliy AI ta'limi. Ikki kurs: AI Video Creator (AI rasm, video, ovoz, montaj) va AI Builder (website, AI web-app, Telegram bot, AI agent).",
 };
 
 // Sahifa yuklanishidan oldin temani qo'yish — "miltillash" (FOUC) bo'lmasligi uchun.

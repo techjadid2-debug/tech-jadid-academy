@@ -23,7 +23,7 @@ export default async function CertificatePage({
 
   return (
     <>
-      <SiteNav links={[]} cta={{ href: "/kurs/ai-asoslari", label: "Kurslar" }} />
+      <SiteNav links={[]} cta={{ href: "/", label: "Kurslar" }} />
       <main className="shell-narrow">
         <div
           className="panel"

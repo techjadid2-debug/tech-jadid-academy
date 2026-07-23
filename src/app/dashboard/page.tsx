@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getEnrollments, isEnrollmentExpired } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
 import { getCompleted, percentOf } from "@/lib/progress";
-import { allLessons, AI_FOUNDATIONS } from "@/lib/course-data";
+import { allLessons, COURSES, PRIMARY_COURSE } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
 import { getUserBadges, getUserPoints } from "@/lib/gamification";
 import { getCertificate } from "@/lib/certificates";
@@ -19,14 +19,32 @@ export default async function DashboardPage() {
   if (!user) redirect("/login?next=/dashboard");
 
   const enrollments = await getEnrollments(user.id);
-  const [points, badges, cohortContext, pendingPayment] = await Promise.all([
+  const enrolledSlugs = enrollments.map((e) => e.courseSlug);
+  const otherCourses = COURSES.filter((c) => !enrolledSlugs.includes(c.slug));
+
+  const [points, badges, cohortPairs, requestPairs, pendingPayments] = await Promise.all([
     getUserPoints(user.id),
     getUserBadges(user.id),
-    getStudentCohortContext(user.id, AI_FOUNDATIONS.slug),
-    getPendingPaymentForUser(user.id, AI_FOUNDATIONS.slug),
+    // Jonli dars konteksti — o'quvchi yozilgan kurslar bo'ylab.
+    Promise.all(enrolledSlugs.map(async (slug) => ({ slug, ctx: await getStudentCohortContext(user.id, slug) }))),
+    // Ariza va to'lov holati — hali yozilmagan kurslar bo'ylab.
+    Promise.all(otherCourses.map(async (c) => ({ slug: c.slug, req: await getRequestStatus(user.id, c.slug) }))),
+    Promise.all(otherCourses.map((c) => getPendingPaymentForUser(user.id, c.slug))),
   ]);
-  const hasCourseEnrollment = enrollments.some((e) => e.courseSlug === AI_FOUNDATIONS.slug);
-  const requestStatus = hasCourseEnrollment ? null : await getRequestStatus(user.id, AI_FOUNDATIONS.slug);
+
+  const cohortPair = cohortPairs.find((p) => p.ctx?.nextSession) ?? cohortPairs.find((p) => p.ctx) ?? null;
+  const cohortContext = cohortPair?.ctx ?? null;
+  const cohortSlug = cohortPair?.slug ?? PRIMARY_COURSE.slug;
+
+  const requestPair =
+    requestPairs.find((p) => p.req?.status === "payment_pending") ??
+    requestPairs.find((p) => p.req?.status === "contacted") ??
+    requestPairs.find((p) => p.req?.status === "pending") ??
+    requestPairs.find((p) => p.req?.status === "rejected") ??
+    null;
+  const requestStatus = requestPair?.req ?? null;
+  const requestSlug = requestPair?.slug ?? PRIMARY_COURSE.slug;
+  const pendingPayment = pendingPayments.find(Boolean) ?? null;
 
   // Har kurs uchun kurs + progress foizini oldindan hisoblaymiz.
   const cards = await Promise.all(
@@ -54,7 +72,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <SiteNav links={[]} cta={{ href: "/kurs/ai-asoslari", label: "Kurslar" }} />
+      <SiteNav links={[]} cta={{ href: "/", label: "Kurslar" }} />
       <main className="shell">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 32 }}>
           <div>
@@ -81,7 +99,7 @@ export default async function DashboardPage() {
             <h2>{String(cohortContext.nextSession.order).padStart(2, "0")} · {cohortContext.nextSession.title}</h2>
             <p className="hint">{new Date(cohortContext.nextSession.sessionStartsAt!).toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short" })}</p>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-              <Link href={`/learn/${AI_FOUNDATIONS.slug}/${cohortContext.nextSession.order}`} className="btn btn-primary">Dars sahifasi →</Link>
+              <Link href={`/learn/${cohortSlug}/${cohortContext.nextSession.order}`} className="btn btn-primary">Dars sahifasi →</Link>
               {cohortContext.cohort.telegramUrl && <a href={cohortContext.cohort.telegramUrl} target="_blank" rel="noreferrer" className="btn btn-ghost">Telegram guruh</a>}
             </div>
           </section>
@@ -136,21 +154,21 @@ export default async function DashboardPage() {
                 <p className="hint" style={{ marginBottom: 20 }}>
                   Guruh va tarif aniqlangach shu yerda shaxsiy checkout paydo bo&apos;ladi. Hozircha 1-darsni bepul ko&apos;rishingiz mumkin.
                 </p>
-                <Link href={`/learn/${AI_FOUNDATIONS.slug}/1`} className="btn btn-primary">1-darsni ko&apos;rish →</Link>
+                <Link href={`/learn/${requestSlug}/1`} className="btn btn-primary">1-darsni ko&apos;rish →</Link>
               </>
             ) : requestStatus?.status === "rejected" ? (
               <>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
                 <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Arizangiz tasdiqlanmadi</div>
                 <p className="hint" style={{ marginBottom: 20 }}>Qayta murojaat qiling yoki ustoz bilan bog&apos;laning.</p>
-                <Link href={`/kurs/${AI_FOUNDATIONS.slug}#narx`} className="btn btn-primary">Qayta ariza yuborish →</Link>
+                <Link href={`/kurs/${requestSlug}#narx`} className="btn btn-primary">Qayta ariza yuborish →</Link>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
                 <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Hali kursingiz yo&apos;q</div>
-                <p className="hint" style={{ marginBottom: 20 }}>AI Asoslari kursiga ro&apos;yxatdan o&apos;ting va o&apos;rganishni boshlang.</p>
-                <Link href={`/kurs/${AI_FOUNDATIONS.slug}#narx`} className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+                <p className="hint" style={{ marginBottom: 20 }}>Katalogdan kurs tanlang — AI Video Creator yoki AI Builder — va o&apos;rganishni boshlang.</p>
+                <Link href="/" className="btn btn-primary">Kurslarni ko&apos;rish →</Link>
               </>
             )}
           </div>

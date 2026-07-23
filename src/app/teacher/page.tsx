@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
 import { getCurrentUser } from "@/lib/auth";
 import { isTeacher, listTeacherCohorts } from "@/lib/cohorts";
-import { AI_FOUNDATIONS } from "@/lib/course-data";
+import { COURSES, PRIMARY_COURSE } from "@/lib/course-data";
 import { listActionableRequests } from "@/lib/enrollment-requests";
 import { approveManualPayment, createCohort, prepareApplicationPayment } from "./actions";
 import { getPendingPaymentForRequest } from "@/lib/payments/db";
@@ -20,11 +20,13 @@ export default async function TeacherPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/teacher");
   if (!isTeacher(user)) redirect("/dashboard");
-  const [{ saved, error, order }, cohorts, requests] = await Promise.all([
+  const [{ saved, error, order }, cohortsByCourse, requestsByCourse] = await Promise.all([
     searchParams,
-    listTeacherCohorts(user, AI_FOUNDATIONS.slug),
-    listActionableRequests(AI_FOUNDATIONS.slug),
+    Promise.all(COURSES.map((c) => listTeacherCohorts(user, c.slug))),
+    Promise.all(COURSES.map((c) => listActionableRequests(c.slug))),
   ]);
+  const cohorts = cohortsByCourse.flat();
+  const requests = requestsByCourse.flat();
   const paymentByRequest = new Map((await Promise.all(requests.map(async (request) => [request.id, await getPendingPaymentForRequest(request.id)] as const))).filter((entry) => entry[1]));
   const telegramReady = telegramConfigured();
   const checkoutUrl = (paymentId: string) => `${env.appUrl || ""}/checkout?order=${paymentId}`;
@@ -84,7 +86,12 @@ export default async function TeacherPage({
           <b>Yangi 8 haftalik guruh</b>
           <p className="hint" style={{ margin: "8px 0 16px" }}>16 dars haftasiga ikki martadan avtomatik jadval qilinadi. Har dars materiali jonli sessiyadan 24 soat oldin ochiladi.</p>
           <form action={createCohort} className="teacher-form-grid">
-            <div className="field"><label>Guruh nomi</label><input name="title" placeholder="AI Super Kurs · Avgust 2026" required /></div>
+            <div className="field"><label>Kurs</label>
+              <select name="courseSlug" defaultValue={PRIMARY_COURSE.slug} required>
+                {COURSES.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Guruh nomi</label><input name="title" placeholder="AI Video Creator · Avgust 2027" required /></div>
             <div className="field"><label>1-jonli dars vaqti</label><input name="startsAt" type="datetime-local" required /></div>
             <div className="field"><label>Telegram guruh havolasi</label><input name="telegramUrl" type="url" placeholder="https://t.me/..." /></div>
             <button className="btn btn-primary" type="submit">Guruh va jadvalni yaratish</button>

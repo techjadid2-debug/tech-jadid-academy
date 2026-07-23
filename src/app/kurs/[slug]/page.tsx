@@ -40,7 +40,7 @@ export default async function CoursePage({
   return (
     <>
       <SiteNav
-        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }}
+        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: `/register?course=${slug}`, label: "Ro'yxatdan o'tish" }}
         secondaryCta={!user ? { href: "/login", label: "Kirish" } : undefined}
       />
       <main className="shell">
@@ -50,9 +50,9 @@ export default async function CoursePage({
           <h1 className="page-title">{course.title}</h1>
           <p className="page-sub">{course.subtitle}</p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <span className="badge badge-blue">16 dars</span>
-            <span className="badge badge-gray">6 modul</span>
-            <span className="badge badge-gray">75–90 daq / dars</span>
+            <span className="badge badge-blue">{allCourseLessons.length} dars</span>
+            <span className="badge badge-gray">{course.modules.length} modul</span>
+            <span className="badge badge-gray">120 daq / dars</span>
             {unlocked && !isPartial && <span className="badge badge-green">✓ Sizda ochiq</span>}
             {isPartial && <span className="badge badge-blue">1–{unlockedThrough}-darslar ochiq</span>}
           </div>
@@ -89,6 +89,7 @@ export default async function CoursePage({
                       <LessonCard
                         key={l.order}
                         lesson={l}
+                        slug={course.slug}
                         unlocked={canOpen}
                         href={canOpen ? `/learn/${course.slug}/${l.order}` : undefined}
                       />
@@ -108,9 +109,12 @@ export default async function CoursePage({
                   1–{unlockedThrough}-darslar ochiq
                 </div>
                 <p className="hint" style={{ marginBottom: 18 }}>
-                  Qolgan darslarni ochish uchun ikkinchi to&apos;lovni ({formatUzs(
-                    course.pricing.find((p) => p.kind === "installment2")?.priceUzs ?? 0,
-                  )}) amalga oshiring.
+                  {(() => {
+                    const second = course.pricing.find((p) => p.kind === "installment2")?.priceUzs;
+                    return second
+                      ? `Qolgan darslarni ochish uchun ikkinchi to'lovni (${formatUzs(second)}) amalga oshiring.`
+                      : "Qolgan darslarni ochish uchun ikkinchi to'lovni amalga oshiring — summa ustoz bilan kelishiladi.";
+                  })()}
                 </p>
                 <form action={startCheckout}>
                   <input type="hidden" name="slug" value={course.slug} />
@@ -134,7 +138,7 @@ export default async function CoursePage({
                 <span className="badge badge-green" style={{ marginBottom: 12 }}>✓ Kirish ochiq</span>
                 <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursingiz tayyor</div>
                 <p className="hint" style={{ marginBottom: 18 }}>
-                  Barcha 16 darsga kirishingiz bor. Qoldirgan joyingizdan davom eting.
+                  Barcha {allCourseLessons.length} darsga kirishingiz bor. Qoldirgan joyingizdan davom eting.
                 </p>
                 <Link
                   href={`/learn/${course.slug}/${firstLesson.order}`}
@@ -159,7 +163,7 @@ export default async function CoursePage({
                     <p className="hint" style={{ marginBottom: 18 }}>
                       Ro&apos;yxatdan o&apos;ting — ustoz aloqaga chiqadi, guruh va to&apos;lovni kelishadi. 1-dars hoziroq bepul.
                     </p>
-                    <Link href="/register" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                    <Link href={`/register?course=${course.slug}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
                       Ro&apos;yxatdan o&apos;tish →
                     </Link>
                     <Link

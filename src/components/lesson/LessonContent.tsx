@@ -48,6 +48,29 @@ export function LessonContent({ blocks }: { blocks: LessonContentBlock[] }) {
                 <ul>{block.checklist.map((item) => <li key={item}>{item}</li>)}</ul>
               </section>
             );
+          case "tools":
+            return (
+              <section key={index} className="lesson-tools">
+                <h3>{block.title}</h3>
+                <p className="lesson-tools-hint">Avval bepul (yoki limitli) tarifda o&apos;rganing — doimiy ishlatish uchun Pro tarifga o&apos;ting.</p>
+                <div className="lesson-tools-grid">
+                  {block.items.map((tool) => (
+                    <div className="tool-card" key={tool.name}>
+                      <div className="tool-name">{tool.name}</div>
+                      <div className="tool-tier">
+                        <span className="tool-badge tool-free">Bepul</span>
+                        <span className="tool-desc">{tool.free}</span>
+                      </div>
+                      <div className="tool-tier">
+                        <span className="tool-badge tool-pro">Pro</span>
+                        <span className="tool-desc">{tool.pro}</span>
+                      </div>
+                      {tool.note && <p className="tool-note">{tool.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
         }
       })}
     </section>

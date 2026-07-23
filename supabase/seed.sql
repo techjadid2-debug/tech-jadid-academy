@@ -1,19 +1,25 @@
 -- ============================================================================
--- Seed: "Sun'iy Intellekt Asoslari" kursi (src/lib/course-data.ts bilan mos).
--- Migratsiyadan keyin ishga tushiring.
+-- Seed: ikkita kurs — "AI Video Creator" va "AI Builder" (src/lib/course-data.ts
+-- bilan mos). Migratsiyalardan keyin ishga tushiring. Idempotent (qayta ishga
+-- tushirsa bo'ladi). Boy kontent va viktorinalar keyin seed:content / seed:quizzes
+-- skriptlari bilan to'ldiriladi.
 -- ============================================================================
 
--- Kurs
+-- Eski kursni nashrdan chiqarish (ma'lumot o'chmaydi).
+update courses set is_published = false where slug = 'ai-asoslari';
+
+-- ---------------------------------------------------------------------------
+-- KURS 1 — AI Video Creator
+-- ---------------------------------------------------------------------------
 insert into courses (slug, title, subtitle, is_published)
 values (
-  'ai-asoslari',
-  'Sun''iy Intellekt Asoslari',
-  '16 darslik amaliy kurs. AI''ni tushuna va super darajada ishlata oladigan mutaxassis bo''lasiz.',
+  'ai-video-creator',
+  'AI Video Creator',
+  '16 darslik amaliy kurs. G''oyadan professional AI videogacha: rasm, video, ovoz, musiqa va montaj.',
   true
 )
-on conflict (slug) do nothing;
+on conflict (slug) do update set title = excluded.title, subtitle = excluded.subtitle, is_published = true;
 
--- Narx variantlari (installment2 uchun avval 0003 migratsiya qo'llangan bo'lishi kerak)
 insert into pricing_options (course_id, kind, label, price_uzs, note)
 select c.id, v.kind::pay_kind, v.label, v.price_uzs, v.note
 from courses c,
@@ -21,57 +27,105 @@ from courses c,
     ('lifetime', 'To''liq kurs uchun bir martalik to''lov', 600000, '2 oylik jonli guruh, 16 darslik platforma va barcha amaliy materiallar.'),
     ('monthly', 'Oyma-oy to''lash', 350000, 'Har oy 350 000 so''m. Kurs 2 oy davom etadi (jami 700 000 so''m).')
   ) as v(kind, label, price_uzs, note)
-where c.slug = 'ai-asoslari'
+where c.slug = 'ai-video-creator'
 on conflict (course_id, kind) do update set
-  label = excluded.label,
-  price_uzs = excluded.price_uzs,
-  note = excluded.note;
+  label = excluded.label, price_uzs = excluded.price_uzs, note = excluded.note;
 
-delete from pricing_options p
-using courses c
-where p.course_id = c.id and c.slug = 'ai-asoslari' and p.kind = 'installment2';
-
--- Modullar
 insert into modules (course_id, "order", code, title, range_text, accent)
 select c.id, m."order", m.code, m.title, m.range_text, m.accent
 from courses c,
   (values
-    (1, 'MODUL 01', 'AI Poydevori', 'Darslar 1–3 · Model qanday ishlaydi va qaysi birini tanlash', 'blue'),
-    (2, 'MODUL 02', 'Prompt Engineering', 'Darslar 4–6 · Aniq buyruqdan qayta ishlatiladigan workflow''gacha', 'red'),
-    (3, 'MODUL 03', 'Media Generatsiya', 'Darslar 7–9 · Rasmdan to''liq video pipeline''gacha', 'yellow'),
-    (4, 'MODUL 04', 'Vibe Coding', 'Darslar 10–12 · Kod yozmasdan real mahsulot qurish', 'green'),
-    (5, 'MODUL 05', 'Agentlar & Avtomatlashtirish', 'Darslar 13–14 · AI''ni asboblarga ulash va bot qurish', 'blue'),
-    (6, 'MODUL 06', 'Tatbiq & Monetizatsiya', 'Darslar 15–16 · Ko''nikmani real daromadga aylantirish', 'red')
+    (1, 'MODUL 01', 'AI Poydevori', 'Darslar 1–3 · Generativ AI, prompt va vosita tanlash', 'blue'),
+    (2, 'MODUL 02', 'Vizual Poydevor', 'Darslar 4–5 · AI rasm va izchillik', 'red'),
+    (3, 'MODUL 03', 'AI Video Studio', 'Darslar 6–13 · Ssenariydan barqaror video kadrgacha', 'yellow'),
+    (4, 'MODUL 04', 'Production va Monetizatsiya', 'Darslar 14–16 · Montaj, format va daromad', 'green')
   ) as m("order", code, title, range_text, accent)
-where c.slug = 'ai-asoslari'
+where c.slug = 'ai-video-creator'
 on conflict (course_id, "order") do nothing;
 
--- Darslar (module + global order bo'yicha).
--- Batafsil "rows" (Nazariy/Amaliy/Natija) ilovadan (course-data.ts) yuklanadi;
--- bu yerda asosiy metadata seed qilinadi.
 insert into lessons (module_id, "order", title, type, video_key, is_preview)
-select mod.id, l."order", l.title, 'video'::lesson_type,
-       'ai-asoslari/' || lpad(l."order"::text, 2, '0'),
-       (l."order" = 1)   -- 1-dars bepul preview
+select mod.id, l."order", l.title, 'video'::lesson_type, null, (l."order" = 1)
 from modules mod
-join courses c on c.id = mod.course_id and c.slug = 'ai-asoslari',
+join courses c on c.id = mod.course_id and c.slug = 'ai-video-creator',
   (values
-    (1, 1, 'Sun''iy intellekt nima?'),
-    (2, 1, 'LLM ichida nima bor?'),
-    (3, 1, 'Modellar dunyosi va model tanlash'),
-    (4, 2, 'Prompt Engineering asoslari'),
-    (5, 2, 'Advanced Prompting'),
-    (6, 2, 'Prompt''dan shaxsiy workflow''ga'),
-    (7, 3, 'Rasm generatsiyasi asoslari'),
-    (8, 3, 'Advanced rasm: izchillik, tahrirlash'),
-    (9, 3, 'Video + Ovoz: to''liq pipeline'),
-    (10, 4, 'Vibe coding nima? Tool''lar'),
-    (11, 4, 'Birinchi haqiqiy app + deploy'),
-    (12, 4, 'AI-quvvatli app qurish'),
-    (13, 5, 'AI agentlar va MCP'),
-    (14, 5, 'Shaxsiy AI yordamchi + Telegram bot'),
-    (15, 6, 'AI''ni real kasbga tatbiq etish'),
-    (16, 6, 'Capstone: Portfolio + Monetizatsiya')
+    (1, 1, 'Generativ AI va zamonaviy modellar'),
+    (2, 1, 'Creator Prompt Engineering'),
+    (3, 1, 'AI tool va model tanlash'),
+    (4, 2, 'AI rasm generatsiyasi'),
+    (5, 2, 'Personaj, mahsulot va uslub izchilligi'),
+    (6, 3, 'Video g''oya, hook va ssenariy'),
+    (7, 3, 'Storyboard va shot list'),
+    (8, 3, 'AI video prompt anatomiyasi'),
+    (9, 3, 'Text-to-video va image-to-video'),
+    (10, 3, 'Kamera harakati va motion control'),
+    (11, 3, 'Personaj va mahsulot izchilligi'),
+    (12, 3, 'Lip-sync va o''zbekcha ovoz'),
+    (13, 3, 'AI musiqa va sound design'),
+    (14, 4, 'CapCut''da montaj va post-production'),
+    (15, 4, 'Kontent formatlari va monetizatsiya'),
+    (16, 4, 'Capstone: professional AI video')
+  ) as l("order", module_order, title)
+where mod."order" = l.module_order
+on conflict (module_id, "order") do nothing;
+
+-- ---------------------------------------------------------------------------
+-- KURS 2 — AI Builder
+-- ---------------------------------------------------------------------------
+insert into courses (slug, title, subtitle, is_published)
+values (
+  'ai-builder',
+  'AI Builder',
+  '16 darslik amaliy kurs. G''oya → Website → AI Web App → Telegram bot → AI agentgacha bitta to''liq mahsulot.',
+  true
+)
+on conflict (slug) do update set title = excluded.title, subtitle = excluded.subtitle, is_published = true;
+
+insert into pricing_options (course_id, kind, label, price_uzs, note)
+select c.id, v.kind::pay_kind, v.label, v.price_uzs, v.note
+from courses c,
+  (values
+    ('lifetime', 'To''liq kurs uchun bir martalik to''lov', 600000, '2 oylik jonli guruh, 16 darslik platforma va barcha amaliy materiallar.'),
+    ('monthly', 'Oyma-oy to''lash', 350000, 'Har oy 350 000 so''m. Kurs 2 oy davom etadi (jami 700 000 so''m).')
+  ) as v(kind, label, price_uzs, note)
+where c.slug = 'ai-builder'
+on conflict (course_id, kind) do update set
+  label = excluded.label, price_uzs = excluded.price_uzs, note = excluded.note;
+
+insert into modules (course_id, "order", code, title, range_text, accent)
+select c.id, m."order", m.code, m.title, m.range_text, m.accent
+from courses c,
+  (values
+    (1, 'MODUL 01', 'Vibe Coding va mahsulot rejasi', 'Darslar 1–2 · Coding agentlar va texnik reja', 'blue'),
+    (2, 'MODUL 02', 'Website yaratish', 'Darslar 3–5 · Landing, frontend, deploy', 'red'),
+    (3, 'MODUL 03', 'AI Web App', 'Darslar 6–8 · Backend, LLM API va auth', 'yellow'),
+    (4, 'MODUL 04', 'AI Telegram Bot', 'Darslar 9–11 · Multimodal bot va deploy', 'green'),
+    (5, 'MODUL 05', 'AI Agentlar', 'Darslar 12–15 · Tool, RAG, xotira va xavfsizlik', 'blue'),
+    (6, 'MODUL 06', 'Capstone', 'Dars 16 · Hammasini bitta mahsulotga birlashtirish', 'red')
+  ) as m("order", code, title, range_text, accent)
+where c.slug = 'ai-builder'
+on conflict (course_id, "order") do nothing;
+
+insert into lessons (module_id, "order", title, type, video_key, is_preview)
+select mod.id, l."order", l.title, 'video'::lesson_type, null, (l."order" = 1)
+from modules mod
+join courses c on c.id = mod.course_id and c.slug = 'ai-builder',
+  (values
+    (1, 1, 'Vibe Coding va coding agentlar'),
+    (2, 1, 'Muammo, MVP, PRD va loyiha arxitekturasi'),
+    (3, 2, 'Landing page va UI/UX'),
+    (4, 2, 'Responsive frontend, forma va interaktivlik'),
+    (5, 2, 'Database ulash, deploy va domen'),
+    (6, 3, 'Backend va API asoslari'),
+    (7, 3, 'LLM API va structured output'),
+    (8, 3, 'Authentication, foydalanuvchi ma''lumotlari va AI funksiyasi'),
+    (9, 4, 'Telegram bot arxitekturasi va komandalar'),
+    (10, 4, 'Matn, rasm va ovozni tushunadigan AI bot'),
+    (11, 4, 'Botni database va web-app bilan ulash, deploy qilish'),
+    (12, 5, 'Workflow va AI agent farqi'),
+    (13, 5, 'Function calling va tashqi tool''lar'),
+    (14, 5, 'RAG, xotira va MCP integratsiyasi'),
+    (15, 5, 'Human approval, evals, xavfsizlik va monitoring'),
+    (16, 6, 'Website + Telegram bot + AI agentni birlashtirish')
   ) as l("order", module_order, title)
 where mod."order" = l.module_order
 on conflict (module_id, "order") do nothing;

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
-import { AI_FOUNDATIONS, formatUzs } from "@/lib/course-data";
+import { COURSES, PRIMARY_COURSE, formatUzs } from "@/lib/course-data";
 import { getCourseAdmin, type AdminLesson, type AdminModule } from "@/lib/course";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
@@ -25,9 +25,10 @@ import {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; course?: string }>;
 }) {
-  const { saved, error } = await searchParams;
+  const { saved, error, course: courseParam } = await searchParams;
+  const selectedCourse = COURSES.find((c) => c.slug === courseParam) ?? PRIMARY_COURSE;
 
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
@@ -46,7 +47,7 @@ export default async function AdminPage({
     );
   }
 
-  const course = await getCourseAdmin(AI_FOUNDATIONS.slug);
+  const course = await getCourseAdmin(selectedCourse.slug);
   const canEdit = course !== null;
 
   // Tahrirlash mumkin bo'lmasa (demo yoki service key yo'q) — sabab ko'rsatiladi.
@@ -58,13 +59,16 @@ export default async function AdminPage({
 
   const lessonCount = course
     ? course.modules.reduce((n, m) => n + m.lessons.length, 0)
-    : AI_FOUNDATIONS.modules.reduce((n, m) => n + m.lessons.length, 0);
+    : selectedCourse.modules.reduce((n, m) => n + m.lessons.length, 0);
   const quizCount = course
     ? course.modules.reduce((n, m) => n + m.lessons.reduce((k, l) => k + l.quiz.length, 0), 0)
     : 0;
 
   const recentPayments = await getRecentPayments();
-  const pendingRequests = isSupabaseConfigured ? await listPendingRequests(AI_FOUNDATIONS.slug) : [];
+  // Arizalar inboxi barcha kurslar bo'ylab (r.courseSlug amalda ishlatiladi).
+  const pendingRequests = isSupabaseConfigured
+    ? (await Promise.all(COURSES.map((c) => listPendingRequests(c.slug)))).flat()
+    : [];
 
   return (
     <>
@@ -77,6 +81,21 @@ export default async function AdminPage({
             <p className="page-sub">O&apos;quvchilar, kirishlar, narxlar, darslar va savollarni shu yerdan boshqaring.</p>
           </div>
           <Link href="/admin/homework" className="btn btn-ghost">Uy vazifalarini baholash →</Link>
+        </div>
+
+        {/* Kurs tanlagich — modul/narx/dars boshqaruvi tanlangan kursga tegishli */}
+        <div className="panel" style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <b style={{ marginRight: 6 }}>Kurs:</b>
+          {COURSES.map((c) => (
+            <Link
+              key={c.slug}
+              href={`/admin?course=${c.slug}`}
+              className={`btn ${c.slug === selectedCourse.slug ? "btn-primary" : "btn-ghost"}`}
+              style={{ padding: "7px 14px", fontSize: 13 }}
+            >
+              {c.title}
+            </Link>
+          ))}
         </div>
 
         {saved && (
@@ -139,7 +158,7 @@ export default async function AdminPage({
           {canEdit ? (
             <>
               <form action={createStudentAccount} style={{ display: "grid", gap: 10 }}>
-                <input type="hidden" name="courseSlug" value={AI_FOUNDATIONS.slug} />
+                <input type="hidden" name="courseSlug" value={selectedCourse.slug} />
                 <div className="admin-account-grid">
                   <div className="field" style={{ marginBottom: 0 }}><label>Ism</label><input name="fullName" required /></div>
                   <div className="field" style={{ marginBottom: 0 }}><label>Telegram yoki telefon</label><input name="contact" /></div>
@@ -159,7 +178,7 @@ export default async function AdminPage({
               <div className="admin-tools-grid">
                 <form action={renewMonthlyAccess} className="field" style={{ marginBottom: 0 }}>
                   <label>2-oy to&apos;lovini tasdiqlash</label>
-                  <input type="hidden" name="courseSlug" value={AI_FOUNDATIONS.slug} />
+                  <input type="hidden" name="courseSlug" value={selectedCourse.slug} />
                   <input name="login" placeholder="o'quvchi login" required />
                   <button type="submit" className="btn btn-ghost" style={{ marginTop: 8 }}>Kirishni 30 kunga uzaytirish</button>
                 </form>
@@ -182,10 +201,10 @@ export default async function AdminPage({
 
         {/* Statistika */}
         <div className="grid-2" style={{ marginBottom: 28 }}>
-          <Stat label="Modullar" value={String(course?.modules.length ?? AI_FOUNDATIONS.modules.length)} />
+          <Stat label="Modullar" value={String(course?.modules.length ?? selectedCourse.modules.length)} />
           <Stat label="Darslar" value={String(lessonCount)} />
           <Stat label="Savollar" value={String(quizCount)} />
-          <Stat label="Tariflar" value={String(course?.pricing.length ?? AI_FOUNDATIONS.pricing.length)} />
+          <Stat label="Tariflar" value={String(course?.pricing.length ?? selectedCourse.pricing.length)} />
         </div>
 
         {/* Narxlar */}
@@ -213,7 +232,7 @@ export default async function AdminPage({
               </form>
             ))
           ) : (
-            AI_FOUNDATIONS.pricing.map((p) => (
+            selectedCourse.pricing.map((p) => (
               <div key={p.kind} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--line)", marginTop: 8 }}>
                 <span>{p.label}</span>
                 <b>{formatUzs(p.priceUzs)}</b>
@@ -224,7 +243,7 @@ export default async function AdminPage({
 
         {/* Darslar */}
         <div className="panel" style={{ marginBottom: 16 }}>
-          <b>{course?.title ?? AI_FOUNDATIONS.title} — dastur</b>
+          <b>{course?.title ?? selectedCourse.title} — dastur</b>
           {canEdit ? (
             <>
               {course!.modules.map((m) => (
@@ -315,7 +334,7 @@ function LessonEditor({ lesson: l }: { lesson: AdminLesson }) {
         <div className="admin-lesson-fields" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           <div className="field" style={{ marginBottom: 8 }}>
             <label>Media kaliti (ishlatilmaydi)</label>
-            <input name="videoKey" defaultValue={l.videoKey ?? ""} placeholder="ai-asoslari/01" />
+            <input name="videoKey" defaultValue={l.videoKey ?? ""} placeholder="kurs-slug/01" />
           </div>
           <div className="field" style={{ marginBottom: 8 }}>
             <label>YouTube ID (ishlatilmaydi)</label>
@@ -335,7 +354,7 @@ function LessonEditor({ lesson: l }: { lesson: AdminLesson }) {
         <div className="field" style={{ marginBottom: 8 }}>
           <label>Boyitilgan kontent (JSON bloklar)</label>
           <textarea name="contentJson" rows={10} defaultValue={JSON.stringify(l.content, null, 2)} spellCheck={false} />
-          <span className="hint">paragraph, heading, image, callout, steps, prompt va task bloklari qo&apos;llanadi.</span>
+          <span className="hint">paragraph, heading, image, callout, steps, prompt, task va tools bloklari qo&apos;llanadi.</span>
         </div>
         <div className="admin-checkboxes" style={{ display: "flex", gap: 18, alignItems: "center", margin: "10px 0" }}>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>

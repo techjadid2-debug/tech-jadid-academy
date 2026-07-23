@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser, normalizeLogin } from "@/lib/auth";
 import { isTeacher } from "@/lib/cohorts";
-import { AI_FOUNDATIONS } from "@/lib/course-data";
+import { COURSES, PRIMARY_COURSE } from "@/lib/course-data";
 import { createPaymentForRequest, getPaymentByOrderId, markPaymentPaid } from "@/lib/payments/db";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
@@ -53,7 +53,9 @@ export async function createCohort(formData: FormData) {
   const telegramUrl = safeUrl(formData.get("telegramUrl"));
   if (!title || !firstSession) redirect("/teacher?error=invalid");
 
-  const courseId = await getCourseId(AI_FOUNDATIONS.slug);
+  const requestedSlug = String(formData.get("courseSlug") ?? "").trim();
+  const courseSlug = COURSES.some((c) => c.slug === requestedSlug) ? requestedSlug : PRIMARY_COURSE.slug;
+  const courseId = await getCourseId(courseSlug);
   if (!courseId) redirect("/teacher?error=course");
   const endsAt = new Date(firstSession.getTime() + 8 * 7 * 24 * 60 * 60 * 1000);
   const { data: cohort, error } = await admin.from("cohorts").insert({

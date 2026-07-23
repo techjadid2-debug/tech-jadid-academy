@@ -18,12 +18,9 @@ interface SiteNavProps {
 }
 
 const DEFAULT_LINKS: NavLink[] = [
-  { href: "/#m1", label: "Poydevor" },
-  { href: "/#m2", label: "Prompt" },
-  { href: "/#m3", label: "Media" },
-  { href: "/#m4", label: "Vibe Coding" },
-  { href: "/#m5", label: "Agentlar" },
-  { href: "/#portfolio", label: "Portfolio" },
+  { href: "/#kurslar", label: "Kurslar" },
+  { href: "/kurs/ai-video-creator", label: "AI Video Creator" },
+  { href: "/kurs/ai-builder", label: "AI Builder" },
 ];
 
 export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", label: "Ro'yxatdan o'tish" }, secondaryCta }: SiteNavProps) {

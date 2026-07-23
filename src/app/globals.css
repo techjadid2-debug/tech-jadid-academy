@@ -365,6 +365,24 @@ footer { padding: 44px 0; border-top: 1px solid var(--line); }
 .lesson-prompt { background: var(--mist); }
 .lesson-prompt pre { overflow-x: auto; white-space: pre-wrap; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
 
+/* ---------- FREE→PRO TOOL TAVSIYASI ---------- */
+.lesson-tools { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: var(--card-bg); }
+.lesson-tools h3 { display: block; font-size: 16px; margin-bottom: 6px; }
+.lesson-tools-hint { color: var(--sub); font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
+.lesson-tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.tool-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--mist); display: flex; flex-direction: column; gap: 8px; }
+.tool-name { font-weight: 700; font-size: 15px; }
+.tool-tier { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+.tool-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em; }
+.tool-free { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.tool-pro { background: color-mix(in srgb, var(--blue) 16%, transparent); color: var(--blue); }
+.tool-desc { color: var(--sub); }
+.tool-note { color: var(--sub); font-size: 12px; line-height: 1.5; font-style: italic; margin-top: 2px; }
+
+/* Cover fallback — rasm bo'lmaganda modul rangli gradient + dars raqami */
+.lesson-cover-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.lesson-cover-num { font-size: clamp(38px, 9vw, 72px); font-weight: 800; letter-spacing: -0.03em; opacity: 0.85; }
+
 /* ---------- HOMEWORK / ARIZALAR (ro'yxatdan o'tish + admin navbat) ---------- */
 .homework-panel { max-width: 720px; }
 .homework-panel textarea { min-height: 120px; resize: vertical; }

@@ -1,54 +1,27 @@
 import type { Course, LessonContentBlock } from "./types";
+import { VIDEO_CREATOR_MATERIALS } from "./content/ai-video-creator";
+import { BUILDER_MATERIALS } from "./content/ai-builder";
 
-function material(
-  order: number,
-  title: string,
-  overview: string,
-  keyPoint: string,
-  steps: string[],
-  task: string,
-): LessonContentBlock[] {
-  const lesson = String(order).padStart(2, "0");
-  return [
-    { type: "image", src: `/course/ai-asoslari/lesson-${lesson}/cover.webp`, alt: `${title} mavzusini tushuntiruvchi vizual` },
-    { type: "heading", text: "Dars maqsadi" },
-    { type: "paragraph", text: overview },
-    { type: "callout", title: "Muhim nuqta", text: keyPoint },
-    { type: "heading", text: "Jonli dars rejasi" },
-    { type: "steps", title: "75–90 daqiqalik mashg'ulot", items: ["20 daqiqa: asosiy tushuncha va xavfsizlik chegaralari.", "25 daqiqa: ustozning ekrandagi real namoyishi.", "30 daqiqa: o'quvchi IT, kontent/media, biznes yoki ta'lim yo'nalishida mustaqil amaliyot qiladi.", "10 daqiqa: natijalarni ko'rib chiqish va savol-javob."] },
-    { type: "steps", title: "Amaliy tartib", items: steps },
-    { type: "callout", title: "Yo'nalishni tanlang", text: "Topshiriqni o'zingizga yaqin yo'nalishda bajaring: IT, kontent/media, biznes yoki ta'lim. Baholash vosita nomiga emas, muammo, jarayon va tekshiriladigan natijaga qaraydi." },
-    { type: "prompt", title: "Ustozga savol tayyorlash", text: `Men ${title} mavzusida [yo'nalish] uchun [natija] tayyorlayapman. Hozirgi urinishim: [qisqa tavsif]. Menda [aniq to'siq] chiqdi. Natijani yaxshilash uchun qaysi bir qadamni o'zgartirishim kerak?` },
-    { type: "task", title: "Dars yakuni", text: task, checklist: ["Yo'nalishim va real vazifamni aniq tanladim.", "Natijani yoki havolani saqladim.", "Kamida bitta yaxshilash nuqtasini topdim.", "Natijani tekshirdim va ustozga kerak bo'lsa aniq savol yozdim."] },
-  ];
-}
+// ============================================================================
+// Har kursning boy dars materiallari (content bloklari) slug bo'yicha saqlanadi.
+// `withLessonMaterials` kurs obyektiga tegishli materialni order bo'yicha biriktiradi.
+// Dars obyektida inline `content` bo'lsa — u ustuvor bo'ladi.
+// ============================================================================
 
-export const LESSON_MATERIALS: Record<number, LessonContentBlock[]> = {
-  2: material(2, "LLM ichida nima bor?", "Katta til modeli matnni tayyor javoblar omboridan olmaydi. U ko'rgan kontekstiga qarab keyingi eng ehtimolli tokenni tanlaydi. Shu oddiy mexanizm juda katta ma'lumot, ko'p parametr va to'g'ri ko'rsatma bilan foydali javoblarga aylanadi.", "Model ishonch bilan yozgani uning javobi to'g'ri degani emas. U manbani, sonlarni va muhim xulosalarni tekshirishga muhtoj.", ["Bir mavzuda qisqa va batafsil savol yozing.", "Ikki javobdagi farqni kontekst va aniqlik bo'yicha solishtiring.", "Javobdan tekshirishingiz kerak bo'lgan uchta da'voni belgilang."], "O'zingiz biladigan mavzu bo'yicha modeldan izoh so'rang va undagi bitta noaniq fikrni aniqlashtiruvchi savol bilan yaxshilang."),
-  3: material(3, "Modellar dunyosi va model tanlash", "Turli modellarning kuchli tomoni turlicha: biri tez yozadi, biri murakkab tahlil qiladi, boshqasi rasm yoki kod bilan yaxshi ishlaydi. To'g'ri tanlov vazifaning turi, sifat talabi, tezlik va narxga bog'liq.", "Modelni brendi bo'yicha emas, aynan o'z vazifangizdagi natija bo'yicha baholang.", ["Bitta real vazifani tanlang.", "Uni kamida ikki modelda bir xil ko'rsatma bilan sinang.", "Sifat, tezlik, nazorat va tekshirish ehtiyoji bo'yicha xulosa qiling."], "Kasbingizdagi bitta ish uchun qaysi modelni tanlashingiz va nima sababdan tanlaganingiz haqida qisqa qo'llanma yozing."),
-  4: material(4, "Prompt Engineering asoslari", "Yaxshi prompt tasodifiy savol emas. U rol, kontekst, vazifa, kerakli format va cheklovlarni aniq beradi. Aniqlik oshgani sari qayta ishlash kamayadi.", "Natija sifati ko'pincha modeldan ko'ra vazifani qanday tushuntirganingizga bog'liq.", ["Bitta noaniq prompt yozing.", "Unga rol, kontekst va aniq natija formatini qo'shing.", "Ikki javobni solishtirib, kuchli versiyani saqlang."], "O'z kasbingiz uchun uchta qayta ishlatiladigan prompt yarating: g'oya, tahlil va tayyor matn uchun."),
-  5: material(5, "Advanced Prompting", "Murakkab vazifada AI'ni bir yo'la katta natija berishga majburlash o'rniga, uni bosqichlarga bo'ling. Strukturali format, tekshirish mezoni va misol berish natijani barqaror qiladi.", "AI'dan fikrlash jarayonini emas, tekshiriladigan oraliq natijalar va yakuniy formatni so'rang.", ["Natijani kichik bosqichlarga ajrating.", "Har bosqich uchun kirish va chiqish formatini belgilang.", "Oxirida sifat mezoni bo'yicha o'zini tekshirtiring."], "Bir murakkab vazifangiz uchun 3 bosqichli prompt zanjiri yozing va har bosqich natijasini tekshiring."),
-  6: material(6, "Prompt'dan shaxsiy workflow'ga", "Workflow - bir marta yaxshi ishlagan promptni saqlab, takrorlanuvchi ishga aylantirishdir. Unda kirish ma'lumoti, qadamlar, tekshiruv va yakuniy fayl yoki natija aniq bo'ladi.", "Prompt kutubxonasi vaqtni tejaydi, lekin u real ishlatilgan holatlardan kelib chiqib doim yangilanadi.", ["Takrorlanadigan vazifani tanlang.", "Kirish ma'lumotlari va kerakli natijani belgilang.", "Promptni saqlang va keyingi ishlatishda xatolarini tuzating."], "Bitta ish jarayoningiz uchun 'kirish -> prompt -> tekshiruv -> natija' sxemasini yarating."),
-  7: material(7, "Rasm generatsiyasi asoslari", "Rasm generatsiyasi g'oya, subyekt, kompozitsiya, uslub, yorug'lik va cheklovlarni birlashtiradi. Yaxshi prompt tasvirni tasodifga tashlab qo'ymaydi.", "Rasm yaratishda eng yaxshi natija bir urinishda emas, kichik o'zgartirishlar bilan iteratsiya qilishda chiqadi.", ["Bitta aniq sahnani tasvirlang.", "Uslub va kadr masofasini qo'shing.", "Natijani baholab, faqat bitta parametrni o'zgartirib qayta yarating."], "Bir g'oya uchun uch xil uslubdagi rasm konseptini yarating va qaysi biri maqsadingizga mosligini yozing."),
-  8: material(8, "Advanced rasm: izchillik, tahrirlash", "Seriyali vizuallarda personaj, rang, kadr va uslub izchilligi muhim. Reference, aniq tavsif va tahrirlash bosqichlari orqali bir xil vizual til saqlanadi.", "Har yangi rasmda hamma narsani o'zgartirmang; faqat kerakli detalni almashtirish izchillikni saqlaydi.", ["Asosiy reference va rang palitrasini tanlang.", "O'zgarmas belgilar ro'yxatini yozing.", "Yangi sahnada faqat joy yoki harakatni almashtiring."], "Bir qahramon yoki mahsulot uchun uch sahnali kichik vizual seriya rejasini tuzing."),
-  9: material(9, "Video + Ovoz: to'liq pipeline", "Qisqa media mahsuloti ssenariydan boshlanadi: g'oya, kadrlar, ovoz, montaj va yakuniy platforma formati. Har bosqich alohida tekshirilsa, natija tezroq yig'iladi.", "Avval hikoya va kadrlar ketma-ketligini hal qiling, keyin vizual hamda ovozni ishlab chiqing.", ["15-30 soniyalik bitta g'oya yozing.", "Uni 4-6 kadrga ajrating.", "Har kadr uchun tasvir, ovoz va montaj talabini belgilang."], "Mahsulot yoki g'oyangiz uchun 30 soniyalik video ssenariy va kadrlar ro'yxatini tayyorlang."),
-  10: material(10, "Vibe coding nima? Tool'lar", "Vibe coding - mahsulot g'oyasini aniq tasvirlab, AI yordamida interfeys va kodning dastlabki versiyasini yaratish usuli. Siz muammoni, foydalanuvchini va natijani aniqroq tushuntirgan sari AI foydaliroq kod beradi.", "AI yaratgan kodni ishlatishdan oldin sinang; xatolikni ham aniq kontekst bilan qayta yuboring.", ["Bitta kichik mahsulot g'oyasini tanlang.", "Foydalanuvchi qiladigan asosiy harakatni yozing.", "AI'dan eng kichik ishlaydigan versiyani so'rang."], "Bir sahifali kichik asbob uchun foydalanuvchi muammosi, asosiy funksiya va muvaffaqiyat mezonini yozing."),
-  11: material(11, "Birinchi haqiqiy app + deploy", "App yaratish g'oyadan keyin tugamaydi: ishlashini tekshirish, xatolarni ko'rish va internetga chiqarish kerak. Deploy - foydalanuvchi sizning mahsulotingizni real manzil orqali sinashi mumkin bo'lgan bosqich.", "Kichik, sinovdan o'tgan versiyani chiqarish mukammal, lekin tugamaydigan mahsulotdan foydaliroq.", ["Asosiy oqimni brauzerda sinang.", "Bitta haqiqiy foydalanuvchi sifatida vazifani bajaring.", "Deploy qiling va jonli URL'ni tekshiring."], "O'zingizning mini-ilovangiz uchun tekshiruv ro'yxati va birinchi deploy maqsadini tayyorlang."),
-  12: material(12, "AI-quvvatli app qurish", "AI funksiyasi mahsulotdagi aniq muammoni hal qilishi kerak: xulosalash, tasniflash, yordamchi javob yoki kontent tayyorlash. Faqat 'AI bor' deb qo'shilgan funksiya foydalanuvchiga qiymat bermaydi.", "AI natijasini foydalanuvchi tekshira oladigan va xatoni tuzata oladigan oqimga joylashtiring.", ["Foydalanuvchining bitta og'riqli nuqtasini tanlang.", "AI undan qanday kirish olishi va nima qaytarishini belgilang.", "Noto'g'ri natija bo'lsa foydalanuvchi nima qilishini rejalang."], "Mini-ilovangizga qo'shiladigan bitta AI funksiyasi uchun kirish, chiqish va xavfsizlik qoidalarini yozing."),
-  13: material(13, "AI agentlar va MCP", "Agent oddiy javob berishdan tashqari, reja tuzishi va ruxsat berilgan asboblar bilan ish bajarishi mumkin. MCP esa modelni fayl, jadval, kalendar yoki boshqa xizmatlar bilan standart usulda bog'laydi.", "Agentga qancha ko'p ruxsat bersangiz, xavfsizlik va tekshiruv shuncha muhim bo'ladi.", ["Bitta takroriy ishni tanlang.", "Kerakli asboblar va ularning ruxsatlarini yozing.", "Inson tasdiqlashi kerak bo'lgan qadamlarni belgilang."], "O'zingizga foydali bitta agent uchun vazifa, asboblar va xavfsizlik chegaralarini chizing."),
-  14: material(14, "Shaxsiy AI yordamchi + Telegram bot", "Telegram bot shaxsiy yordamchini kundalik ish jarayoniga olib kiradi: eslatma, qisqa xulosa, g'oya va tezkor buyruqlar bitta odatiy kanalga joylashadi.", "Bot avval bitta foydali vazifani mukammal bajarsin; keyin yangi buyruqlarni qo'shing.", ["Bitta foydali bot vazifasini tanlang.", "Kirish xabari va kutiladigan javobni yozing.", "Noto'g'ri yoki noaniq so'rovga javobini rejalang."], "Telegram botingiz uchun uchta buyruq yoki xabar oqimini va ularning natijasini yozing."),
-  15: material(15, "AI'ni real kasbga tatbiq etish", "AI eng yaxshi natijani kasbingizdagi aniq jarayonga qo'shilganda beradi. Kontent, marketing, ta'lim, dizayn va savdoda u tayyor ishni almashtirishdan ko'ra, tayyorgarlik va tahlilni tezlashtiradi.", "Bir vaqtning o'zida hamma ishni avtomatlashtirmang; eng ko'p vaqt oladigan kichik qadamdan boshlang.", ["Bir haftalik ishlaringizni yozing.", "Takrorlanadigan va ko'p vaqt oladigan qadamni tanlang.", "AI bilan oldin-keyin farqini o'lchang."], "Kasbingiz uchun bitta AI workflow hujjatini tayyorlang: vazifa, prompt, tekshiruv, natija."),
-  16: material(16, "Capstone: Portfolio + Monetizatsiya", "Kurs yakuni - o'rgangan narsalarni ko'rsatadigan portfolio va ularni kimga qanday qiymat sifatida taklif qilishingizni aniqlash. Portfolio faqat chiroyli rasm emas, muammo, yechim va natijani ko'rsatadi.", "Daromad taklifi texnologiyadan emas, mijozning muammosini qanchalik aniq hal qilishingizdan boshlanadi.", ["Eng yaxshi uchta ishni tanlang.", "Har biri uchun muammo, yechim va natijani yozing.", "Kimga qanday xizmat yoki mahsulot taklif qilishingizni aniqlang."], "Bitta sahifalik portfolio rejasini va birinchi taklifingizni tayyorlang."),
+const MATERIALS_BY_SLUG: Record<string, Record<number, LessonContentBlock[]>> = {
+  "ai-video-creator": VIDEO_CREATOR_MATERIALS,
+  "ai-builder": BUILDER_MATERIALS,
 };
 
 export function withLessonMaterials(course: Course): Course {
+  const materials = MATERIALS_BY_SLUG[course.slug] ?? {};
   return {
     ...course,
     modules: course.modules.map((module) => ({
       ...module,
       lessons: module.lessons.map((lesson) => ({
         ...lesson,
-        content: lesson.content?.length ? lesson.content : LESSON_MATERIALS[lesson.order] ?? [],
+        content: lesson.content?.length ? lesson.content : materials[lesson.order] ?? [],
       })),
     })),
   };

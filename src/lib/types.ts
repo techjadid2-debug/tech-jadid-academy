@@ -10,6 +10,17 @@ export interface LessonRow {
   text: string;
 }
 
+export interface ToolPick {
+  /** Vosita nomi (masalan "ChatGPT", "Midjourney", "Cursor") */
+  name: string;
+  /** Bepul yoki limitli tarif — boshlash uchun */
+  free: string;
+  /** Doimiy/professional ishlatish uchun pullik Pro tarif */
+  pro: string;
+  /** Qo'shimcha izoh (ixtiyoriy) */
+  note?: string;
+}
+
 export type LessonContentBlock =
   | { type: "paragraph"; text: string }
   | { type: "heading"; text: string }
@@ -17,7 +28,9 @@ export type LessonContentBlock =
   | { type: "callout"; title: string; text: string }
   | { type: "steps"; title: string; items: string[] }
   | { type: "prompt"; title: string; text: string }
-  | { type: "task"; title: string; text: string; checklist: string[] };
+  | { type: "task"; title: string; text: string; checklist: string[] }
+  /** Free→Pro vosita tavsiyasi: avval bepul/limitli, keyin doimiy ishlatish uchun Pro. */
+  | { type: "tools"; title: string; items: ToolPick[] };
 
 export interface Lesson {
   /** Global tartib raqami (1..16) */

@@ -5,7 +5,7 @@ import { emailForLogin, setDemoUser, makeUserId, type AppUser } from "@/lib/auth
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createRequest } from "@/lib/enrollment-requests";
-import { AI_FOUNDATIONS } from "@/lib/course-data";
+import { COURSES, PRIMARY_COURSE } from "@/lib/course-data";
 import { isSupabaseConfigured } from "@/lib/env";
 import { parseRegistrationForm } from "@/lib/registration";
 
@@ -20,7 +20,9 @@ export async function registerStudent(formData: FormData) {
   if (!parsed.ok) redirect(`/register?error=${parsed.error}`);
   const input = parsed.value;
 
-  const courseSlug = AI_FOUNDATIONS.slug;
+  // Ariza foydalanuvchi kelgan kursga bog'lanadi (kurs sahifasidan `course` maydoni).
+  const requestedSlug = String(formData.get("course") ?? "").trim();
+  const courseSlug = COURSES.some((c) => c.slug === requestedSlug) ? requestedSlug : PRIMARY_COURSE.slug;
 
   if (!isSupabaseConfigured) {
     const user: AppUser = {

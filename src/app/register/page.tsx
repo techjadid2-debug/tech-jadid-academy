@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { registerStudent } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { COURSES, PRIMARY_COURSE } from "@/lib/course-data";
 
 const ERROR_TEXT: Record<string, string> = {
   invalid: "Barcha maydonlarni to'ldiring. Parol kamida 8 belgidan iborat bo'lishi kerak.",
@@ -18,17 +19,19 @@ const ERROR_TEXT: Record<string, string> = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; course?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, course } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect("/dashboard");
+
+  const selectedCourse = COURSES.find((c) => c.slug === course) ?? PRIMARY_COURSE;
 
   return (
     <>
       <SiteNav links={[]} cta={{ href: "/login", label: "Kirish" }} />
       <main className="shell-narrow">
-        <div className="page-eyebrow" style={{ textAlign: "center" }}>Ro&apos;yxatdan o&apos;tish</div>
+        <div className="page-eyebrow" style={{ textAlign: "center" }}>Ro&apos;yxatdan o&apos;tish · {selectedCourse.title}</div>
         <h1 className="page-title" style={{ textAlign: "center" }}>Kursga ariza qoldiring</h1>
         <p className="page-sub" style={{ textAlign: "center" }}>
           Ro&apos;yxatdan o&apos;tgach arizangiz ustozga yuboriladi. Guruh va tarif kelishilgach shaxsiy checkout tayyorlanadi; to&apos;lovdan keyin dars jadvali ochiladi.
@@ -42,6 +45,7 @@ export default async function RegisterPage({
             </p>
           )}
           <form action={registerStudent}>
+            <input type="hidden" name="course" value={selectedCourse.slug} />
             <div className="field">
               <label htmlFor="fullName">Ismingiz</label>
               <input id="fullName" name="fullName" placeholder="Masalan: Abdulaziz Karimov" required />

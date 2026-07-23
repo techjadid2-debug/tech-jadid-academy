@@ -15,6 +15,8 @@ function formatDur(sec: number) {
 
 interface LessonCardProps {
   lesson: Lesson;
+  /** Kurs slug'i — cover rasm yo'li uchun */
+  slug: string;
   /** Bosilganda ochiladigan URL (bo'lsa — karta havolaga aylanadi) */
   href?: string;
   /** Landing'da scroll-reveal animatsiyasi kerak bo'lsa */
@@ -23,11 +25,11 @@ interface LessonCardProps {
   unlocked?: boolean;
 }
 
-export function LessonCard({ lesson, href, reveal, unlocked }: LessonCardProps) {
+export function LessonCard({ lesson, slug, href, reveal, unlocked }: LessonCardProps) {
   const inner = (
     <>
       <div className="vframe">
-        <LessonCover order={lesson.order} title={lesson.title} />
+        <LessonCover order={lesson.order} title={lesson.title} slug={slug} />
         {lesson.isPreview ? (
           <span className="vf-lock vf-free">Bepul tanishuv</span>
         ) : unlocked ? null : (
