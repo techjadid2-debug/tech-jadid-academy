@@ -36,11 +36,14 @@ async function main() {
 
     for (const lesson of lessons) {
       const seeds = bank[Number(lesson.order)] ?? [];
+      // `order` PostgREST'ning maxsus parametri — `.eq("order", n)` filtri noto'g'ri
+      // talqin qilinadi. Shu sabab darsning mavjud savol tartiblarini bir marta o'qib,
+      // JS'da tekshiramiz (idempotent qayta ishga tushirish uchun).
+      const { data: existingQs } = await admin.from("quiz_questions").select("order").eq("lesson_id", lesson.id);
+      const existingOrders = new Set((existingQs ?? []).map((row) => Number(row.order)));
       for (const [index, seed] of seeds.entries()) {
         const order = index + 1;
-        const { data: existing } = await admin.from("quiz_questions").select("id")
-          .eq("lesson_id", lesson.id).eq("order", order).maybeSingle();
-        if (existing) continue;
+        if (existingOrders.has(order)) continue;
 
         const { data: question, error: questionError } = await admin.from("quiz_questions").insert({
           lesson_id: lesson.id, order, prompt: seed.prompt, explanation: seed.explanation, points: 10,
