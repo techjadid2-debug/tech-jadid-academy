@@ -6,6 +6,7 @@ import { COURSES, allLessons, formatUzs } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
 import { getPublicCohortSummary } from "@/lib/cohorts";
+import { CatalogCover } from "@/components/course/CatalogCover";
 import type { Course } from "@/lib/types";
 
 const WHO_FOR = [
@@ -85,6 +86,7 @@ export default async function LandingPage() {
           <div className="course-catalog-grid" style={{ marginTop: 8 }}>
             {cards.map(({ course, lessonCount, preview, lifetime, cohort }) => (
               <article className="panel course-catalog-card" key={course.slug}>
+                <CatalogCover slug={course.slug} />
                 <div className="page-eyebrow">{course.title} · {course.year}</div>
                 <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>{course.title}</h2>
                 <p className="hint" style={{ marginBottom: 14, lineHeight: 1.6 }}>{course.subtitle}</p>

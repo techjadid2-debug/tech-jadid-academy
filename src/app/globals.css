@@ -186,10 +186,23 @@ header.nav.scrolled { border-bottom-color: var(--line); background: var(--nav-bg
 .pricing .sub { color: var(--sub); font-size: 16px; margin-bottom: 44px; }
 .price-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 320px)); gap: 20px; justify-content: center; padding: 0 22px; }
 /* Katalog: ikki kurs kartasi — markazda, kengroq (grid-2 auto-fill emas) */
-.course-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 440px)); gap: 24px; justify-content: center; align-items: start; padding: 0 22px; text-align: left; }
-.course-catalog-card { display: flex; flex-direction: column; }
+.course-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 500px)); gap: 24px; justify-content: center; align-items: stretch; padding: 0 22px; text-align: left; }
+.course-catalog-card { display: flex; flex-direction: column; overflow: hidden; }
 .course-catalog-card .catalog-actions { margin-top: auto; }
-@media (max-width: 900px) { .course-catalog-grid { grid-template-columns: minmax(0, 480px); } }
+@media (max-width: 940px) { .course-catalog-grid { grid-template-columns: minmax(0, 520px); } }
+
+/* Cover banner — SVG motiv + brend "aurora" gradient (rasmsiz, light/dark) */
+.catalog-cover { position: relative; aspect-ratio: 16 / 7; margin: -24px -24px 18px; border-radius: 20px 20px 0 0; overflow: hidden; background: var(--mist); }
+.catalog-cover::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(65% 95% at 14% 18%, color-mix(in srgb, var(--blue) 55%, transparent), transparent 72%),
+    radial-gradient(60% 85% at 86% 22%, color-mix(in srgb, var(--red) 48%, transparent), transparent 72%),
+    radial-gradient(65% 95% at 72% 92%, color-mix(in srgb, var(--yellow) 44%, transparent), transparent 72%),
+    radial-gradient(55% 85% at 26% 96%, color-mix(in srgb, var(--green) 42%, transparent), transparent 72%);
+}
+.catalog-cover-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+@media (max-width: 620px) { .catalog-cover { margin: -18px -18px 16px; border-radius: 16px 16px 0 0; } }
 
 .price-card { border: 1px solid var(--line); border-radius: 24px; padding: 32px 28px; background: var(--card-bg); text-align: left; position: relative; transition: transform 0.35s var(--ease), box-shadow 0.35s; }
 .price-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.14); }
