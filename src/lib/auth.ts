@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -37,9 +38,11 @@ export function emailForLogin(login: string): string {
   return `${login}@${LOGIN_EMAIL_DOMAIN}`;
 }
 
-export async function getCurrentUser(): Promise<AppUser | null> {
+// Render davomida keshlanadi — har sahifada bir necha marta chaqirilsa ham
+// Supabase sessiya so'rovi bir marta bajariladi.
+export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   return isSupabaseConfigured ? getSupabaseUser() : getDemoUser();
-}
+});
 
 // ---- REAL rejim ----------------------------------------------------------
 

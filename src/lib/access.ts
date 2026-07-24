@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { Enrollment, EnrollmentSource } from "./types";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -18,11 +19,21 @@ const ENROLL_COOKIE = "tj_enroll";
 /** "2 bo'lib to'lash"da 1-to'lovdan keyin ochiladigan oxirgi dars tartibi. */
 export const INSTALLMENT_FIRST_UNLOCK = 8;
 
-export async function getEnrollments(userId: string): Promise<Enrollment[]> {
+// So'rov bir render davomida takrorlanmasin (dars/kurs sahifasida canAccessLesson
+// har dars uchun chaqiriladi) — React cache() bir userId uchun bitta so'rov qiladi.
+export const getEnrollments = cache(async (userId: string): Promise<Enrollment[]> => {
   if (isSupabaseConfigured) return getDbEnrollments(userId);
   const all = await readCookieEnrollments();
   return all.filter((e) => e.userId === userId);
-}
+});
+
+/** Foydalanuvchi roli (admin/instructor bypass uchun) — render davomida keshlanadi. */
+const getUserRole = cache(async (userId: string): Promise<string | null> => {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
+  return (data?.role as string | null) ?? null;
+});
 
 /** Yozilish muddati o'tganmi (lifetime uchun har doim false). */
 export function isEnrollmentExpired(enrollment: Pick<Enrollment, "expiresAt">): boolean {
@@ -46,11 +57,8 @@ export async function canAccessLesson(
   courseSlug: string,
   lessonOrder: number,
 ): Promise<boolean> {
-  const admin = createSupabaseAdmin();
-  if (admin) {
-    const { data: profile } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
-    if (profile?.role === "admin" || profile?.role === "instructor") return true;
-  }
+  const role = await getUserRole(userId);
+  if (role === "admin" || role === "instructor") return true;
   const enrollment = await getActiveEnrollment(userId, courseSlug);
   if (!enrollment) return false;
   if (enrollment.unlockedThrough !== null && lessonOrder > enrollment.unlockedThrough) return false;
