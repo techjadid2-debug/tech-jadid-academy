@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import Image from "next/image";
+import { type ReactNode, useEffect, useState } from "react";
 
 // Kurs mavzusiga mos SVG motiv (rasmsiz cover banner uchun). Brend "aurora"
 // gradient CSS'da (.catalog-cover::before); bu yerda faqat oq motiv.
@@ -53,12 +56,48 @@ const MOTIFS: Record<string, ReactNode> = {
   "ai-builder": BUILDER_MOTIF,
 };
 
+function getTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
 export function CatalogCover({ slug }: { slug: string }) {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [failedSources, setFailedSources] = useState<string[]>([]);
+  const hasCover = slug in MOTIFS;
+  const imageSrc = `/course/${slug}/cover-${theme}.webp`;
+  const failed = failedSources.includes(imageSrc);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setTheme(getTheme());
+    const observer = new MutationObserver(syncTheme);
+
+    syncTheme();
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="catalog-cover" aria-hidden="true">
-      <svg className="catalog-cover-art" viewBox="0 0 400 175" preserveAspectRatio="xMidYMid slice" role="presentation">
-        {MOTIFS[slug] ?? VIDEO_MOTIF}
-      </svg>
+      {hasCover && !failed ? (
+        <Image
+          key={imageSrc}
+          src={imageSrc}
+          alt=""
+          fill
+          sizes="(max-width: 940px) 100vw, 50vw"
+          className="catalog-cover-image"
+          onError={() =>
+            setFailedSources((current) =>
+              current.includes(imageSrc) ? current : [...current, imageSrc],
+            )
+          }
+        />
+      ) : (
+        <svg className="catalog-cover-art" viewBox="0 0 400 175" preserveAspectRatio="xMidYMid slice" role="presentation">
+          {MOTIFS[slug] ?? VIDEO_MOTIF}
+        </svg>
+      )}
     </div>
   );
 }

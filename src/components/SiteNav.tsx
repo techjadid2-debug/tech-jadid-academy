@@ -22,8 +22,9 @@ const DEFAULT_LINKS: NavLink[] = [
   { href: "/kurs/ai-video-creator", label: "AI Video Creator" },
   { href: "/kurs/ai-builder", label: "AI Builder" },
 ];
+const DEFAULT_CTA = { href: "/login", label: "Kirish" };
 
-export function SiteNav({ links = DEFAULT_LINKS, cta = { href: "/register", label: "Ro'yxatdan o'tish" }, secondaryCta }: SiteNavProps) {
+export function SiteNav({ links = DEFAULT_LINKS, cta = DEFAULT_CTA, secondaryCta }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLElement>(null);

@@ -7,6 +7,10 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getLessonId } from "@/lib/supabase/db";
 import { issueCertificateIfEligible } from "@/lib/certificates";
 import type { AppUser } from "@/lib/auth";
+import {
+  normalizeHomeworkLink,
+  validHomeworkFileMeta,
+} from "@/lib/homework-files";
 
 // ============================================================================
 // Uy vazifasi — matn + fayl + havola. Topshirilganda AI darhol dastlabki
@@ -19,7 +23,7 @@ import type { AppUser } from "@/lib/auth";
 
 const COOKIE = "tj_homework";
 const MAX_TEXT_CHARS = 4000;
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+const HOMEWORK_AI_DAILY_LIMIT = 3;
 
 type StoredSubmission = Omit<HomeworkSubmission, "courseSlug" | "lessonOrder"> & {
   courseSlug: string;
@@ -67,18 +71,23 @@ export async function submitHomework(
   input: SubmitHomeworkInput,
 ): Promise<HomeworkSubmission> {
   const contentText = input.text.trim().slice(0, MAX_TEXT_CHARS) || null;
-  const linkUrl = input.link.trim().slice(0, 500) || null;
+  const linkUrl = normalizeHomeworkLink(input.link);
 
   let filePath: string | null = null;
   let fileName: string | null = null;
   const lessonId = isSupabaseConfigured ? await getLessonId(slug, order) : null;
   const expectedPrefix = lessonId ? `${userId}/${lessonId}/` : "";
   if (input.filePath && expectedPrefix && input.filePath.startsWith(expectedPrefix)) {
-    filePath = input.filePath.slice(0, 500);
-    fileName = (input.fileName ?? "fayl").trim().slice(0, 180);
+    const uploaded = await validateUploadedObject(input.filePath);
+    if (uploaded) {
+      filePath = input.filePath.slice(0, 500);
+      fileName = (input.fileName ?? "fayl").trim().slice(0, 180);
+    }
   }
   if (input.file && input.file.size > 0 && isSupabaseConfigured) {
-    if (input.file.size > MAX_FILE_BYTES) throw new Error("Fayl hajmi 10MB dan oshmasligi kerak.");
+    if (!validHomeworkFileMeta({ size: input.file.size, contentType: input.file.type })) {
+      throw new Error("Fayl turi yoki hajmi ruxsat etilmagan.");
+    }
     const admin = createSupabaseAdmin();
     if (admin) {
       const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -95,7 +104,12 @@ export async function submitHomework(
     }
   }
 
-  const grade = await gradeWithAi(lesson, moduleTitle, courseTitle, { contentText, linkUrl, fileName });
+  const canGrade = lessonId
+    ? await claimHomeworkAiUsage(userId, lessonId)
+    : false;
+  const grade = canGrade
+    ? await gradeWithAi(lesson, moduleTitle, courseTitle, { contentText, linkUrl, fileName })
+    : null;
   const status: HomeworkStatus = grade ? "ai_graded" : "submitted";
   const now = new Date().toISOString();
 
@@ -120,6 +134,47 @@ export async function submitHomework(
 
   if (isSupabaseConfigured) return saveDbSubmission(userId, slug, order, submission);
   return saveCookieSubmission(userId, slug, order, submission);
+}
+
+async function claimHomeworkAiUsage(userId: string, lessonId: string): Promise<boolean> {
+  if (!isSandboxConfigured) return false;
+  const admin = createSupabaseAdmin();
+  if (!admin) return false;
+  const { data, error } = await admin.rpc("claim_homework_ai_usage", {
+    p_user_id: userId,
+    p_lesson_id: lessonId,
+    p_daily_limit: HOMEWORK_AI_DAILY_LIMIT,
+  });
+  if (error) {
+    console.error("[homework] AI quota claim failed", error);
+    return false;
+  }
+  return Boolean(data);
+}
+
+async function validateUploadedObject(path: string): Promise<boolean> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return false;
+  const slash = path.lastIndexOf("/");
+  if (slash < 1) return false;
+  const folder = path.slice(0, slash);
+  const name = path.slice(slash + 1);
+  const { data, error } = await admin.storage.from("homework").list(folder, {
+    search: name,
+    limit: 20,
+  });
+  if (error) {
+    console.error("[homework] uploaded file metadata failed", error);
+    return false;
+  }
+  const object = data?.find((item) => item.name === name);
+  const metadata = object?.metadata as
+    | { size?: number; mimetype?: string; contentType?: string }
+    | undefined;
+  return validHomeworkFileMeta({
+    size: Number(metadata?.size ?? 0),
+    contentType: String(metadata?.mimetype ?? metadata?.contentType ?? ""),
+  });
 }
 
 /** Ustozning admin panel uchun — hali ko'rib chiqilmagan (AI baholagan) topshiriqlar. */

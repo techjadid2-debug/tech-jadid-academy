@@ -9,7 +9,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { canAccessLesson, getActiveEnrollment } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
 import { getCompleted, percentOf } from "@/lib/progress";
-import { LessonSlides } from "@/components/lesson/LessonSlides";
 import { HomeworkPanel } from "@/components/lesson/HomeworkPanel";
 import { getSubmission } from "@/lib/homework";
 import { completeAndNext, unmarkComplete } from "@/app/learn/actions";
@@ -77,7 +76,7 @@ export default async function LearnPage({
       <SiteNav
         links={[{ href: `/kurs/${slug}`, label: "Kurs sahifasi" }]}
         cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: "/login", label: "Kirish" }}
-        secondaryCta={!user ? { href: `/register?course=${slug}`, label: "Ro'yxatdan o'tish" } : undefined}
+        secondaryCta={!user ? { href: `/?course=${slug}#lead`, label: "Qo'ng'iroq so'rash" } : undefined}
       />
       <main className="shell">
         {welcome && (
@@ -134,7 +133,6 @@ export default async function LearnPage({
                       )}
                     </div>
                   )}
-                  <LessonSlides lesson={lesson} />
                   <LessonContent blocks={lesson.content ?? []} />
                 </>
               )}
@@ -197,7 +195,7 @@ export default async function LearnPage({
                   <b>Bepul darsni ko&apos;rdingiz — keyingi qadamni saqlab qoling</b>
                   <p className="hint">Hisob yaratsangiz arizangiz ustozga boradi. Guruh sanasi va to&apos;lov siz bilan kelishilgandan keyingina davom etasiz.</p>
                   <div className="preview-cta-actions">
-                    <Link href={`/register?course=${slug}`} className="btn btn-primary">Ro&apos;yxatdan o&apos;tish →</Link>
+                    <Link href={`/?course=${slug}#lead`} className="btn btn-primary">Qo&apos;ng&apos;iroq so&apos;rash →</Link>
                     <Link href={`/login?next=${encodeURIComponent(`/learn/${slug}/${order}`)}`} className="btn btn-ghost">Hisobim bor</Link>
                   </div>
                 </div>

@@ -8,7 +8,9 @@ import { getCourseAdmin, type AdminLesson, type AdminModule } from "@/lib/course
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { listPendingRequests } from "@/lib/enrollment-requests";
+import { listSellerAccounts } from "@/lib/sellers";
 import {
+  createSellerAccount,
   createLesson,
   createStudentAccount,
   deleteQuizQuestion,
@@ -16,6 +18,7 @@ import {
   approveEnrollmentRequest,
   rejectEnrollmentRequest,
   resetStudentPassword,
+  resetSellerPassword,
   setInstructorRole,
   updateLesson,
   updatePricing,
@@ -64,7 +67,10 @@ export default async function AdminPage({
     ? course.modules.reduce((n, m) => n + m.lessons.reduce((k, l) => k + l.quiz.length, 0), 0)
     : 0;
 
-  const recentPayments = await getRecentPayments();
+  const [recentPayments, sellers] = await Promise.all([
+    getRecentPayments(),
+    listSellerAccounts(),
+  ]);
   // Arizalar inboxi barcha kurslar bo'ylab (r.courseSlug amalda ishlatiladi).
   const pendingRequests = isSupabaseConfigured
     ? (await Promise.all(COURSES.map((c) => listPendingRequests(c.slug)))).flat()
@@ -80,7 +86,10 @@ export default async function AdminPage({
             <h1 className="page-title">Kontent boshqaruvi</h1>
             <p className="page-sub">O&apos;quvchilar, kirishlar, narxlar, darslar va savollarni shu yerdan boshqaring.</p>
           </div>
-          <Link href="/admin/homework" className="btn btn-ghost">Uy vazifalarini baholash →</Link>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link href="/sotuvchi" className="btn btn-primary">Call-center CRM →</Link>
+            <Link href="/admin/homework" className="btn btn-ghost">Uy vazifalarini baholash →</Link>
+          </div>
         </div>
 
         {/* Kurs tanlagich — modul/narx/dars boshqaruvi tanlangan kursga tegishli */}
@@ -197,6 +206,76 @@ export default async function AdminPage({
               </div>
             </>
           ) : <p className="hint">Bu amal uchun Supabase service key kerak.</p>}
+        </section>
+
+        <section className="panel" id="sotuvchilar" style={{ marginBottom: 16 }}>
+          <b>Sotuvchilar ({sellers.length})</b>
+          <p className="hint" style={{ margin: "8px 0 14px" }}>
+            Sotuvchi CRM&apos;dagi leadlarni ko&apos;radi; o&apos;ziga biriktirilgan lead
+            bo&apos;yicha to&apos;lovni yakunlab kurs ochadi.
+          </p>
+          {canEdit ? (
+            <>
+              <form action={createSellerAccount} className="admin-account-grid">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Ism</label>
+                  <input name="fullName" required />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Login</label>
+                  <input
+                    name="login"
+                    pattern="[a-z0-9][a-z0-9_.-]{2,31}"
+                    required
+                  />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Boshlang&apos;ich parol</label>
+                  <input name="password" type="password" minLength={8} required />
+                </div>
+                <button className="btn btn-primary" type="submit">
+                  Sotuvchi yaratish
+                </button>
+              </form>
+              {sellers.length > 0 && (
+                <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
+                  {sellers.map((seller) => (
+                    <div
+                      key={seller.id}
+                      style={{
+                        borderTop: "1px solid var(--line)",
+                        paddingTop: 10,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <b>{seller.fullName}</b>{" "}
+                        <span className="hint">@{seller.login}</span>
+                      </div>
+                      <form action={resetSellerPassword} style={{ display: "flex", gap: 8 }}>
+                        <input type="hidden" name="sellerId" value={seller.id} />
+                        <input
+                          name="password"
+                          type="password"
+                          minLength={8}
+                          placeholder="Yangi parol"
+                          required
+                        />
+                        <button className="btn btn-ghost" type="submit">
+                          Parolni yangilash
+                        </button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="hint">Bu amal uchun Supabase service key kerak.</p>
+          )}
         </section>
 
         {/* Statistika */}
@@ -321,7 +400,7 @@ function LessonEditor({ lesson: l }: { lesson: AdminLesson }) {
         <span style={{ fontWeight: 600, flex: 1 }}>{l.title}</span>
         <span className="hint">
           {l.isPreview ? "bepul · " : ""}
-          Slaydli dars · {l.quiz.length} savol{l.sandboxEnabled ? " · AI" : ""}
+          Dars materiali · {l.quiz.length} savol{l.sandboxEnabled ? " · AI" : ""}
         </span>
       </summary>
 

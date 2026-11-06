@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import type { Enrollment, EnrollmentSource } from "./types";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isDemoModeEnabled, isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
 import { isCohortLessonReleased } from "@/lib/cohorts";
@@ -23,6 +23,7 @@ export const INSTALLMENT_FIRST_UNLOCK = 8;
 // har dars uchun chaqiriladi) — React cache() bir userId uchun bitta so'rov qiladi.
 export const getEnrollments = cache(async (userId: string): Promise<Enrollment[]> => {
   if (isSupabaseConfigured) return getDbEnrollments(userId);
+  if (!isDemoModeEnabled) return [];
   const all = await readCookieEnrollments();
   return all.filter((e) => e.userId === userId);
 });
@@ -73,6 +74,7 @@ export async function grantAccess(
   userId: string,
   courseSlug: string,
   source: EnrollmentSource,
+  grantedBy?: string,
 ): Promise<void> {
   const expiresAt =
     source === "monthly"
@@ -81,9 +83,10 @@ export async function grantAccess(
   const unlockedThrough = source === "installment2" ? INSTALLMENT_FIRST_UNLOCK : null;
 
   if (isSupabaseConfigured) {
-    await grantDbAccess(userId, courseSlug, source, expiresAt, unlockedThrough);
+    await grantDbAccess(userId, courseSlug, source, expiresAt, unlockedThrough, grantedBy);
     return;
   }
+  if (!isDemoModeEnabled) throw new Error("Kirish xizmati sozlanmagan.");
   await grantCookieAccess(userId, courseSlug, source, expiresAt, unlockedThrough);
 }
 
@@ -152,6 +155,7 @@ async function grantDbAccess(
   source: EnrollmentSource,
   expiresAt: string | null,
   unlockedThrough: number | null,
+  grantedBy?: string,
 ): Promise<void> {
   const admin = createSupabaseAdmin();
   if (!admin) return;
@@ -160,7 +164,14 @@ async function grantDbAccess(
   const { error } = await admin
     .from("enrollments")
     .upsert(
-      { user_id: userId, course_id: courseId, source, expires_at: expiresAt, unlocked_through: unlockedThrough },
+      {
+        user_id: userId,
+        course_id: courseId,
+        source,
+        expires_at: expiresAt,
+        unlocked_through: unlockedThrough,
+        granted_by: grantedBy ?? null,
+      },
       { onConflict: "user_id,course_id" },
     );
   if (error) {

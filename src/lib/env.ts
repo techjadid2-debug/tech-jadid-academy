@@ -35,10 +35,22 @@ export const env = {
   // Vercel'da OIDC token avtomatik bor; lokalda `vercel env pull` yoki API kalit.
   aiGatewayKey: process.env.AI_GATEWAY_API_KEY ?? "",
   sandboxModel: process.env.AI_SANDBOX_MODEL ?? "anthropic/claude-haiku-4.5",
+
+  // Xavfsiz default: public ro'yxatdan o'tish va demo faqat aniq yoqilganda ishlaydi.
+  publicRegistrationEnabled: process.env.PUBLIC_REGISTRATION_ENABLED === "true",
+  demoModeEnabled:
+    process.env.NODE_ENV !== "production" &&
+    process.env.ENABLE_DEMO_MODE === "true",
 };
 
 /** Supabase ulanganmi? Bo'lmasa DEMO rejim (cookie asosida). */
 export const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
+
+/** Demo cookie auth production'da hech qachon yoqilmaydi. */
+export const isDemoModeEnabled = env.demoModeEnabled;
+
+/** Seller-first launch: yangi public hisob/ariza oqimi default bo'yicha yopiq. */
+export const isPublicRegistrationEnabled = env.publicRegistrationEnabled;
 
 /** Production'da demo checkout hech qachon kursni avtomatik ochmasligi kerak. */
 export const isManualSalesConfigured = Boolean(

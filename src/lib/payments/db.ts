@@ -281,3 +281,31 @@ export async function markPaymentPaid(
     }, { onConflict: "cohort_id,user_id" });
   }
 }
+
+/** Admin qo'lda tasdiqlagan payment va entitlement'ni bitta DB transactionda yozadi. */
+export async function recordManualAccessPayment(input: {
+  userId: string;
+  courseId: string;
+  amountUzs: number;
+  kind: PricingKind;
+  step: 1 | 2;
+  actorId: string;
+  raw?: Record<string, unknown>;
+}): Promise<string | null> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data, error } = await admin.rpc("record_manual_access_payment", {
+    p_user_id: input.userId,
+    p_course_id: input.courseId,
+    p_amount_uzs: input.amountUzs,
+    p_kind: input.kind,
+    p_step: input.step,
+    p_actor_id: input.actorId,
+    p_raw: input.raw ?? {},
+  });
+  if (error || !data) {
+    console.error("[payments] atomic manual access failed", error);
+    return null;
+  }
+  return data as string;
+}

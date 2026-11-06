@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { setDemoUser, makeUserId, clearUser, emailForLogin, normalizeLogin, type AppUser } from "@/lib/auth";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { isDemoModeEnabled } from "@/lib/env";
 
 function safeNext(next: FormDataEntryValue | null): string {
   const n = String(next ?? "/dashboard");
@@ -27,6 +28,13 @@ export async function signInWithPassword(formData: FormData) {
   if (error) {
     redirect(`/login?next=${encodeURIComponent(next)}&error=credentials`);
   }
+  if (next === "/dashboard") {
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("role")
+      .maybeSingle();
+    if (profile?.role === "seller") redirect("/sotuvchi");
+  }
   redirect(next);
 }
 
@@ -35,6 +43,7 @@ export async function signInWithPassword(formData: FormData) {
 // ============================================================================
 
 export async function demoLogin(formData: FormData) {
+  if (!isDemoModeEnabled) redirect("/login");
   const name = String(formData.get("name") ?? "").trim() || "O'quvchi";
   const contact = String(formData.get("contact") ?? "").trim();
   const next = safeNext(formData.get("next"));

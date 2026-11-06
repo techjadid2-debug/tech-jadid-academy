@@ -6,7 +6,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createRequest } from "@/lib/enrollment-requests";
 import { COURSES, PRIMARY_COURSE } from "@/lib/course-data";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isPublicRegistrationEnabled, isSupabaseConfigured } from "@/lib/env";
 import { parseRegistrationForm } from "@/lib/registration";
 
 // ============================================================================
@@ -16,6 +16,7 @@ import { parseRegistrationForm } from "@/lib/registration";
 // ============================================================================
 
 export async function registerStudent(formData: FormData) {
+  if (!isPublicRegistrationEnabled) redirect("/login?registration=closed");
   const parsed = parseRegistrationForm(formData);
   if (!parsed.ok) redirect(`/register?error=${parsed.error}`);
   const input = parsed.value;

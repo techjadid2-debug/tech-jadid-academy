@@ -38,6 +38,9 @@ export async function unmarkComplete(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const course = await getCourseAsync(slug);
+  if (!course || !getLesson(course, order)) redirect("/");
+  if (!(await canAccessLesson(user.id, slug, order))) redirect(`/kurs/${slug}#narx`);
   await setCompleted(user.id, slug, order, false);
   redirect(`/learn/${slug}/${order}`);
 }

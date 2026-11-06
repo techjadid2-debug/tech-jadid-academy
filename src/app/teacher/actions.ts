@@ -10,7 +10,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseId } from "@/lib/supabase/db";
 import type { PricingKind } from "@/lib/types";
 import { buildCohortSchedule } from "@/lib/cohort-schedule";
-import { isCheckoutConfigured } from "@/lib/env";
+import { isCheckoutConfigured, isPublicRegistrationEnabled } from "@/lib/env";
 
 async function requireTeacherDb(cohortId?: string) {
   const user = await getCurrentUser();
@@ -47,6 +47,7 @@ function validDate(value: FormDataEntryValue | null): Date | null {
 
 /** 8 haftalik, haftasiga ikki darslik cohort va uning to'liq jadvalini yaratadi. */
 export async function createCohort(formData: FormData) {
+  if (!isPublicRegistrationEnabled) redirect("/teacher?error=legacy-disabled");
   const { user, admin } = await requireTeacherDb();
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
   const firstSession = validDate(formData.get("startsAt"));
@@ -188,6 +189,9 @@ export async function prepareApplicationPayment(formData: FormData) {
 export async function approveManualPayment(formData: FormData) {
   const paymentId = String(formData.get("paymentId") ?? "");
   if (!paymentId) redirect("/teacher?error=invalid#applications");
+  const viewer = await getCurrentUser();
+  if (!viewer) redirect("/login?next=/teacher");
+  if (!isTeacher(viewer)) redirect("/dashboard");
   const payment = await getPaymentByOrderId(paymentId);
   if (!payment?.cohortId || payment.status !== "pending") redirect("/teacher?error=payment#applications");
   const { user } = await requireTeacherDb(payment.cohortId);

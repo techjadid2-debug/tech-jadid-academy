@@ -9,7 +9,7 @@ import { listActionableRequests } from "@/lib/enrollment-requests";
 import { approveManualPayment, createCohort, prepareApplicationPayment } from "./actions";
 import { getPendingPaymentForRequest } from "@/lib/payments/db";
 import { CopyButton } from "@/components/CopyButton";
-import { env, isCheckoutConfigured } from "@/lib/env";
+import { env, isCheckoutConfigured, isPublicRegistrationEnabled } from "@/lib/env";
 import { telegramConfigured } from "@/lib/telegram";
 
 export default async function TeacherPage({
@@ -82,21 +82,23 @@ export default async function TeacherPage({
           {cohorts.length === 0 && <div className="panel"><b>Hali jonli guruh yo&apos;q</b><p className="hint" style={{ marginTop: 8 }}>Birinchi guruhni quyidagi forma orqali yarating.</p></div>}
         </section>
 
-        <section className="panel" style={{ marginBottom: 24 }}>
-          <b>Yangi 8 haftalik guruh</b>
-          <p className="hint" style={{ margin: "8px 0 16px" }}>16 dars haftasiga ikki martadan avtomatik jadval qilinadi. Har dars materiali jonli sessiyadan 24 soat oldin ochiladi.</p>
-          <form action={createCohort} className="teacher-form-grid">
-            <div className="field"><label>Kurs</label>
-              <select name="courseSlug" defaultValue={PRIMARY_COURSE.slug} required>
-                {COURSES.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
-              </select>
-            </div>
-            <div className="field"><label>Guruh nomi</label><input name="title" placeholder="AI Video Creator · Avgust 2027" required /></div>
-            <div className="field"><label>1-jonli dars vaqti</label><input name="startsAt" type="datetime-local" required /></div>
-            <div className="field"><label>Telegram guruh havolasi</label><input name="telegramUrl" type="url" placeholder="https://t.me/..." /></div>
-            <button className="btn btn-primary" type="submit">Guruh va jadvalni yaratish</button>
-          </form>
-        </section>
+        {isPublicRegistrationEnabled && (
+          <section className="panel" style={{ marginBottom: 24 }}>
+            <b>Yangi 8 haftalik guruh</b>
+            <p className="hint" style={{ margin: "8px 0 16px" }}>16 dars haftasiga ikki martadan avtomatik jadval qilinadi. Har dars materiali jonli sessiyadan 24 soat oldin ochiladi.</p>
+            <form action={createCohort} className="teacher-form-grid">
+              <div className="field"><label>Kurs</label>
+                <select name="courseSlug" defaultValue={PRIMARY_COURSE.slug} required>
+                  {COURSES.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Guruh nomi</label><input name="title" placeholder="AI Video Creator · Avgust 2027" required /></div>
+              <div className="field"><label>1-jonli dars vaqti</label><input name="startsAt" type="datetime-local" required /></div>
+              <div className="field"><label>Telegram guruh havolasi</label><input name="telegramUrl" type="url" placeholder="https://t.me/..." /></div>
+              <button className="btn btn-primary" type="submit">Guruh va jadvalni yaratish</button>
+            </form>
+          </section>
+        )}
 
         <section className="panel" id="applications">
           <b>Qabul va to&apos;lov ({requests.length})</b>
@@ -169,5 +171,6 @@ function errorMessage(error: string) {
   if (error === "payment-config") return "Checkout yaratilmadi: avval karta va chek yuborish kanalini sozlang.";
   if (error === "no-service-key") return "Supabase service key sozlanmagan.";
   if (error === "forbidden") return "Bu guruhni boshqarishga ruxsatingiz yo'q.";
+  if (error === "legacy-disabled") return "Yangi cohort oqimi yopilgan. Kurs kirishini sotuvchi panelidan oching.";
   return "Amal bajarilmadi. Ma'lumotlarni tekshirib qayta urining.";
 }

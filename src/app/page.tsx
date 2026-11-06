@@ -1,38 +1,59 @@
 import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
-import { Reveal } from "@/components/Reveal";
+import { LeadForm } from "@/components/LeadForm";
+import { CatalogCover } from "@/components/course/CatalogCover";
 import { COURSES, allLessons, formatUzs } from "@/lib/course-data";
 import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
 import { getPublicCohortSummary } from "@/lib/cohorts";
-import { CatalogCover } from "@/components/course/CatalogCover";
-import type { Course } from "@/lib/types";
 
-const WHO_FOR = [
-  { ico: "🎬", h: "Kontent kreatori", p: "AI Video Creator bilan g'oyadan professional videogacha: rasm, video, ovoz va montajni AI orqali yaratasiz." },
-  { ico: "🚀", h: "Quruvchi / tadbirkor", p: "AI Builder bilan website, AI web-app, Telegram bot va agentdan iborat bitta real mahsulot qurasiz." },
-  { ico: "💼", h: "Kasb egasi", p: "Ikkala kursda ham avval bepul vositalar bilan boshlaysiz, keyin doimiy ish uchun Pro tariflarni o'rganasiz." },
-];
-
-const LAB_STEPS = [
-  { n: "15′", h: "Nazariya", p: "Bugungi aniq maqsad va kerakli tushuncha." },
-  { n: "25′", h: "Live build", p: "Ustoz bilan ekranda birga quramiz." },
-  { n: "65′", h: "O'z loyihangiz", p: "Siz o'z loyihangizni qurasiz — ustoz yordamida." },
-  { n: "15′", h: "Code review", p: "Debugging va natijani birga baholaymiz." },
+const STEPS = [
+  {
+    n: "01",
+    title: "Kursni tanlang",
+    text: "Dastur va bepul birinchi darsni ko'rib, o'zingizga mos yo'nalishni tanlang.",
+  },
+  {
+    n: "02",
+    title: "Raqamingizni qoldiring",
+    text: "Sotuvchi sizga telefon qilib, jadval, narx va barcha savollaringizni tushuntiradi.",
+  },
+  {
+    n: "03",
+    title: "Kursni boshlang",
+    text: "To'lov tasdiqlangach login va parol olasiz, kurs darhol kabinetingizda ochiladi.",
+  },
 ];
 
 const FAQ = [
-  { q: "Ikki kursning farqi nima?", a: "AI Video Creator — AI bilan professional video, rasm va ovoz yaratish (kontent kreatorlari uchun). AI Builder — website, AI web-app, Telegram bot va agentdan iborat bitta to'liq mahsulot qurish (quruvchilar uchun)." },
-  { q: "Kod yozishni bilishim shartmi?", a: "Yo'q. AI Video Creator'da umuman kod kerak emas. AI Builder esa \"vibe coding\" asosida — natijani AI'ga tasvirlab berasiz, kod coding agent tomonidan yoziladi. Boshlang'ich va tajribali ishtirokchilar bir xil boshlaydi." },
-  { q: "Har dars qancha davom etadi?", a: "Har dars — 120 daqiqalik project lab: 15 daq nazariya, 25 daq ustoz bilan live build, 65 daq o'quvchi o'z loyihasini quradi, 15 daq debugging va code review. Har dars ko'rsatsa bo'ladigan natija bilan tugaydi." },
-  { q: "Qaysi AI tool'lardan foydalanamiz?", a: "Video Creator'da: ChatGPT/Claude, Midjourney/Flux, Runway/Kling/Veo, ElevenLabs, Suno, CapCut. Builder'da: Cursor/Claude/Bolt/v0, Supabase, Vercel, LLM API'lar, MCP. Har vositada avval bepul (yoki limitli) tarif, keyin doimiy ishlatish uchun Pro tarif ko'rsatiladi." },
-  { q: "AI vositalari uchun alohida to'lov kerakmi?", a: "Kurs narxi tashqi AI servislarining pullik tariflarini o'z ichiga olmaydi. Darslarda avval bepul variantlar ko'rsatiladi; pullik Pro tarif zarur bo'lsa, xarajat oldindan aytiladi." },
-  { q: "Kurs oxirida nimaga ega bo'laman?", a: "AI Video Creator'da — professional AI video va portfolio. AI Builder'da — website + Telegram bot + AI agentdan iborat bitta ishlaydigan mahsulot." },
+  {
+    q: "Kod yozishni bilishim kerakmi?",
+    a: "Yo'q. AI Video Creator uchun kod kerak emas. AI Builder'da kodni AI yozadi, siz esa vazifani to'g'ri tushuntirish va natijani tekshirishni o'rganasiz.",
+  },
+  {
+    q: "Darslar qanday o'tadi?",
+    a: "Kurs 2 oy davom etadi. Kechki jonli Google Meet darslari va 16 darslik platforma birga ishlaydi.",
+  },
+  {
+    q: "To'lovdan oldin kim bilan gaplashaman?",
+    a: "Formada telefoningizni qoldiring. Sotuvchi sizga qo'ng'iroq qilib, guruh sanasi, tarif va to'lov tartibini tushuntiradi.",
+  },
+  {
+    q: "Birinchi dars haqiqatan bepulmi?",
+    a: "Ha. Har ikki kursning 1-darsini hisob ochmasdan ko'rishingiz mumkin.",
+  },
 ];
 
-export default async function LandingPage() {
-  const user = await getCurrentUser();
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ course?: string }>;
+}) {
+  const [{ course: requestedCourse }, user] = await Promise.all([
+    searchParams,
+    getCurrentUser(),
+  ]);
   const cards = await Promise.all(
     COURSES.map(async (base) => {
       const [loaded, cohort] = await Promise.all([
@@ -41,152 +62,149 @@ export default async function LandingPage() {
       ]);
       const course = loaded ?? base;
       const lessons = allLessons(course);
-      const preview = lessons.find((l) => l.isPreview);
-      const lifetime = course.pricing.find((p) => p.kind === "lifetime") ?? course.pricing[0];
-      return { course, lessonCount: lessons.length, preview, lifetime, cohort };
+      const preview = lessons.find((lesson) => lesson.isPreview) ?? lessons[0];
+      const price = course.pricing.find((plan) => plan.kind === "lifetime") ?? course.pricing[0];
+      return { course, lessons, preview, price, cohort };
     }),
   );
+  const defaultCourseSlug = cards.some((card) => card.course.slug === requestedCourse)
+    ? requestedCourse!
+    : cards[0].course.slug;
+  const leadCourses = cards.map(({ course, preview }) => ({
+    slug: course.slug,
+    title: course.title,
+    previewHref: `/learn/${course.slug}/${preview.order}`,
+  }));
 
   return (
     <>
       <SiteNav
-        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: "/register", label: "Ro'yxatdan o'tish" }}
+        links={[
+          { href: "/#kurslar", label: "Kurslar" },
+          { href: "/#bepul-darslar", label: "Bepul 1-dars" },
+          { href: "/#jarayon", label: "Qanday ishlaydi" },
+        ]}
+        cta={
+          user
+            ? { href: user.role === "seller" ? "/sotuvchi" : "/dashboard", label: "Kabinet" }
+            : { href: "/#lead", label: "Qo'ng'iroq so'rash" }
+        }
         secondaryCta={!user ? { href: "/login", label: "Kirish" } : undefined}
       />
-      <Reveal />
       <main id="top">
-        {/* HERO */}
-        <section className="hero">
-          <div className="eyebrow">Tech Jadid akademiya · 2027</div>
+        <section className="hero compact-hero">
+          <div className="eyebrow">Tech Jadid akademiyasi · Jonli + platforma</div>
           <h1>
-            Ikki AI kursi —<br />
-            <span className="grad">o&apos;zingizga mosini tanlang.</span>
+            AI&apos;ni tomosha qilmang.<br />
+            <span className="grad">Amalda ishlating.</span>
           </h1>
           <p className="lead">
-            2 oy davom etadigan kechki <b>Google Meet</b> darslari va 16 darslik platforma. Har dars —{" "}
-            <b>120 daqiqalik project lab</b>. Avval <b>bepul vositalar</b> bilan boshlaysiz, keyin doimiy
-            ishlatish uchun <b>Pro tariflarni</b> o&apos;rganasiz. Har dars ko&apos;rsatsa bo&apos;ladigan natija qoldiradi.
+            Ikki amaliy yo&apos;nalish: AI bilan professional video yarating yoki
+            website, Telegram bot va AI agentdan iborat ishlaydigan mahsulot quring.
           </p>
-          <div className="stats">
-            <div className="stat"><div className="num">2</div><div className="lbl">Kurs</div></div>
-            <div className="stat"><div className="num">16</div><div className="lbl">Dars / kurs</div></div>
-            <div className="stat"><div className="num">120<small> daq</small></div><div className="lbl">Project lab</div></div>
-            <div className="stat"><div className="num">1</div><div className="lbl">To&apos;liq mahsulot</div></div>
+          <div className="hero-proof">
+            <span>16 dars</span>
+            <span>2 oy</span>
+            <span>Jonli Google Meet</span>
+            <span>Bepul 1-dars</span>
           </div>
           <div className="hero-cta">
-            <Link href="#kurslar" className="btn btn-primary">Kurslarni ko&apos;rish ↓</Link>
-            <Link href={user ? "/dashboard" : "/register"} className="btn btn-ghost">{user ? "Kabinetga o'tish →" : "Ro'yxatdan o'tish →"}</Link>
+            <Link href="#lead" className="btn btn-primary">Qo&apos;ng&apos;iroq so&apos;rash</Link>
+            <Link href="#bepul-darslar" className="btn btn-ghost">Bepul 1-darsni ko&apos;rish →</Link>
           </div>
         </section>
 
-        {/* KURSLAR KATALOGI */}
-        <section className="pricing" id="kurslar">
-          <h2>Ikki AI kursi</h2>
-          <p className="sub">Har kurs mustaqil — birini yoki ikkalasini tanlashingiz mumkin. Har birida to&apos;liq dastur, video darslar va Free→Pro vosita tavsiyalari.</p>
-          <div className="course-catalog-grid" style={{ marginTop: 8 }}>
-            {cards.map(({ course, lessonCount, preview, lifetime, cohort }) => (
-              <article className="panel course-catalog-card" key={course.slug}>
+        <section className="compact-courses" id="kurslar" aria-labelledby="courses-title">
+          <div className="compact-section-head">
+            <div className="page-eyebrow">Ikki yo&apos;nalish</div>
+            <h2 id="courses-title">O&apos;zingizga mos kursni tanlang</h2>
+            <p>Har bir kurs mustaqil. Birini tanlaysiz va natijaga olib boradigan 16 darslik yo&apos;lni bosib o&apos;tasiz.</p>
+          </div>
+          <div className="course-catalog-grid" id="bepul-darslar">
+            {cards.map(({ course, lessons, preview, price, cohort }) => (
+              <article className="panel course-catalog-card compact-course-card" key={course.slug}>
                 <CatalogCover slug={course.slug} />
-                <div className="page-eyebrow">{course.title} · {course.year}</div>
-                <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>{course.title}</h2>
-                <p className="hint" style={{ marginBottom: 14, lineHeight: 1.6 }}>{course.subtitle}</p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-                  <span className="badge badge-blue">{course.modules.length} modul</span>
-                  <span className="badge badge-gray">{lessonCount} dars</span>
-                  <span className="badge badge-gray">120 daq / dars</span>
+                <div className="page-eyebrow">{course.title}</div>
+                <h3>{course.title}</h3>
+                <p className="compact-course-subtitle">{course.subtitle}</p>
+                <div className="compact-course-facts">
+                  <span>{lessons.length} dars</span>
+                  <span>{course.modules.length} modul</span>
+                  <span>2 oy</span>
                 </div>
-                <CourseModules course={course} />
-                {lifetime && (
-                  <div style={{ margin: "16px 0 6px", fontWeight: 700, fontSize: 18 }}>
-                    {formatUzs(lifetime.priceUzs)}
-                    <span className="hint" style={{ fontWeight: 400 }}> · bir martalik</span>
+                <div className="compact-course-result">
+                  <b>Kurs natijasi</b>
+                  <p>{preview.rows.find((row) => row.kind === "Natija")?.text ?? preview.title}</p>
+                </div>
+                <div className="compact-course-bottom">
+                  <div>
+                    <strong>{formatUzs(price.priceUzs)}</strong>
+                    <span>{cohort ? `${formatCohortDate(cohort.startsAt)} boshlanadi` : "Guruh sanasi qo'ng'iroqda kelishiladi"}</span>
                   </div>
-                )}
-                <p className="hint" style={{ marginBottom: 16 }}>
-                  {cohort ? `${cohort.title}: ${formatCohortStart(cohort.startsAt)} boshlanadi.` : "Guruh sanasi to'lovdan oldin siz bilan kelishiladi."}
-                </p>
-                <div className="catalog-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <Link href={`/kurs/${course.slug}`} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", minWidth: 160 }}>
-                    Dasturni ko&apos;rish →
-                  </Link>
-                  {preview && (
-                    <Link href={`/learn/${course.slug}/${preview.order}`} className="btn btn-ghost" style={{ flex: 1, justifyContent: "center", minWidth: 140 }}>
+                  <div className="catalog-actions">
+                    <Link
+                      href={`/learn/${course.slug}/${preview.order}`}
+                      className="btn btn-primary"
+                    >
                       Bepul 1-dars
                     </Link>
-                  )}
+                    <Link
+                      href={`/?course=${encodeURIComponent(course.slug)}#lead`}
+                      className="btn btn-ghost"
+                    >
+                      Qo&apos;ng&apos;iroq so&apos;rash
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         </section>
 
-        {/* KIMLAR UCHUN */}
-        <section className="whofor">
-          <div className="wf-eyebrow">Kimlar uchun</div>
-          <h2>Darajangiz muhim emas — natija muhim.</h2>
-          <div className="wf-grid">
-            {WHO_FOR.map((w) => (
-              <div className="wf-item" key={w.h}>
-                <span className="wf-ico">{w.ico}</span>
-                <h4>{w.h}</h4>
-                <p>{w.p}</p>
-              </div>
+        <section className="lead-section" id="lead" aria-labelledby="lead-title">
+          <div className="lead-section-copy">
+            <div className="page-eyebrow">Savolingiz bormi?</div>
+            <h2 id="lead-title">Raqamingizni qoldiring — o&apos;zimiz qo&apos;ng&apos;iroq qilamiz</h2>
+            <p>
+              Qaysi kurs mosligi, dars vaqti, narx va to&apos;lov tartibini oddiy tilda
+              tushuntiramiz. Forma hech qanday to&apos;lov majburiyatini yuklamaydi.
+            </p>
+            <ul>
+              <li>Jadval va guruh sanasini bilib olasiz</li>
+              <li>Kurslar farqini sotuvchidan so&apos;raysiz</li>
+              <li>Qaror qilgachgina to&apos;lov qilasiz</li>
+            </ul>
+          </div>
+          <div className="panel lead-form-card">
+            <LeadForm courses={leadCourses} defaultCourseSlug={defaultCourseSlug} />
+          </div>
+        </section>
+
+        <section className="process-section" id="jarayon" aria-labelledby="process-title">
+          <div className="compact-section-head">
+            <div className="page-eyebrow">Uchta oddiy qadam</div>
+            <h2 id="process-title">Kursga kirish qanday ochiladi?</h2>
+          </div>
+          <div className="process-grid">
+            {STEPS.map((step) => (
+              <article key={step.n}>
+                <span>{step.n}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
             ))}
           </div>
         </section>
 
-        {/* FORMAT — 120 daqiqalik project lab */}
-        <section className="course-format" aria-labelledby="format-title">
-          <div className="format-inner">
-            <div className="wf-eyebrow">Har dars qanday o&apos;tadi</div>
-            <h2 id="format-title">120 daqiqalik project lab.</h2>
-            <div className="format-grid">
-              {LAB_STEPS.map((s) => (
-                <article key={s.h}><span>{s.n}</span><b>{s.h}</b><p>{s.p}</p></article>
-              ))}
-            </div>
-            <p className="format-status">Kurs oxirida alohida mashqlar emas — bitta to&apos;liq, ko&apos;rsatsa bo&apos;ladigan mahsulot bo&apos;ladi.</p>
-          </div>
-        </section>
-
-        {/* INSTRUCTOR */}
-        <section className="instructor">
-          <div className="in-wrap">
-            <div className="in-avatar">AV</div>
-            <div>
-              <div className="in-eyebrow">Kurslarni kim o&apos;tadi</div>
-              <div className="in-name">Abdulvosit</div>
-              <p className="in-role">
-                AI Engineer &amp; Robototexnika mutaxassisi · Tech Jadid asoschisi. FastAPI, pgvector
-                va LLM asosida real AI mahsulotlar quradi (ChaqimchiAI va boshqalar), shu bilan birga
-                o&apos;zbek tilida amaliy AI ta&apos;limini rivojlantiradi.
-              </p>
-              <div className="in-stats">
-                <div className="in-stat"><b>120+</b><span>Obunachi</span></div>
-                <div className="in-stat"><b>2</b><span>Amaliy kurs</span></div>
-                <div className="in-stat"><b>Najot Ta&apos;lim</b><span>Hamkor</span></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="faq">
-          <div className="faq-eyebrow">Savollar</div>
+        <section className="faq compact-faq">
+          <div className="faq-eyebrow">Qisqa javoblar</div>
           <h2>Ko&apos;p so&apos;raladigan savollar</h2>
-          {FAQ.map((f, i) => (
-            <details className="faq-item" key={f.q} open={i === 0}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
+          {FAQ.map((item, index) => (
+            <details className="faq-item" key={item.q} open={index === 0}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
             </details>
           ))}
-        </section>
-
-        {/* FINAL CTA */}
-        <section className="final-cta" id="cta">
-          <h2>Boshlashga tayyormisiz?</h2>
-          <p>Kursni tanlang — ariza qoldiring. Aniq jadval va tarif to&apos;lovdan oldin kelishiladi.</p>
-          <Link href="#kurslar" className="btn btn-primary">Kurslarni ko&apos;rish →</Link>
         </section>
       </main>
       <SiteFooter />
@@ -194,26 +212,10 @@ export default async function LandingPage() {
   );
 }
 
-function CourseModules({ course }: { course: Course }) {
-  return (
-    <ul style={{ display: "grid", gap: 6, margin: 0, padding: 0, listStyle: "none" }}>
-      {course.modules.map((m) => (
-        <li key={m.order} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 14 }}>
-          <span className="m-num" style={{ ["--accent" as string]: `var(--${m.accent})`, flexShrink: 0 }}>{m.code}</span>
-          <span>{m.title}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function formatCohortStart(value: string) {
+function formatCohortDate(value: string) {
   return new Intl.DateTimeFormat("uz-UZ", {
     timeZone: "Asia/Tashkent",
     day: "numeric",
     month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   }).format(new Date(value));
 }

@@ -19,7 +19,7 @@ const ACCENTS = ["var(--blue)", "var(--red)", "var(--yellow)", "var(--green)"];
 
 export function LessonCover({ order, title, slug }: LessonCoverProps) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [failed, setFailed] = useState(false);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -32,32 +32,38 @@ export function LessonCover({ order, title, slug }: LessonCoverProps) {
   }, []);
 
   const lessonNumber = String(order).padStart(2, "0");
-  const imageName = theme === "dark" ? "cover-dark.webp" : "cover.webp";
+  const imageSrc = `/course/${slug}/lesson-${lessonNumber}/cover-${theme}.webp`;
+  const failed = failedSources.includes(imageSrc);
   const accent = ACCENTS[(order - 1) % ACCENTS.length];
 
-  if (failed) {
-    return (
+  return (
+    <>
+      {failed ? (
       <div
         className="lesson-cover lesson-cover-fallback"
         aria-label={`${title} darsi uchun cover`}
         style={{
           background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, var(--card-bg)), var(--card-bg))`,
         }}
-      >
-        <span className="lesson-cover-num" style={{ color: accent }}>{lessonNumber}</span>
-      </div>
-    );
-  }
-
-  return (
-    <Image
-      key={imageName}
-      src={`/course/${slug}/lesson-${lessonNumber}/${imageName}`}
-      alt={`${title} darsi uchun cover rasm`}
-      fill
-      sizes="(max-width: 800px) 100vw, 50vw"
-      className="lesson-cover"
-      onError={() => setFailed(true)}
-    />
+      />
+      ) : (
+        <Image
+          key={imageSrc}
+          src={imageSrc}
+          alt={`${title} darsi uchun cover rasm`}
+          fill
+          sizes="(max-width: 800px) 100vw, 50vw"
+          className="lesson-cover"
+          onError={() =>
+            setFailedSources((current) =>
+              current.includes(imageSrc) ? current : [...current, imageSrc],
+            )
+          }
+        />
+      )}
+      <span className="lesson-cover-num" style={{ color: accent }} aria-hidden="true">
+        {lessonNumber}
+      </span>
+    </>
   );
 }

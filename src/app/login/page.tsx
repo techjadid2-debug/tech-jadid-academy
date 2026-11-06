@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
@@ -10,12 +10,12 @@ import { SubmitButton } from "@/components/SubmitButton";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string; registered?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; registered?: string; registration?: string }>;
 }) {
-  const { next, error, registered } = await searchParams;
+  const { next, error, registered, registration } = await searchParams;
   const user = await getCurrentUser();
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-  if (user) redirect(safeNext);
+  if (user) redirect(user.role === "seller" && safeNext === "/dashboard" ? "/sotuvchi" : safeNext);
 
   return (
     <>
@@ -28,6 +28,12 @@ export default async function LoginPage({
         </p>
 
         <div className="panel">
+          {registration === "closed" && (
+            <p className="hint" role="status" style={{ marginBottom: 14 }}>
+              Yangi hisobni sotuvchi to&apos;lov tasdiqlangach yaratadi. Hisobingiz
+              bo&apos;lsa login va parol bilan kiring.
+            </p>
+          )}
           {isSupabaseConfigured ? (
             <RealAuth error={error} registered={registered === "1"} next={safeNext} />
           ) : (
@@ -76,7 +82,7 @@ function RealAuth({
 
       <p className="hint" style={{ marginTop: 14, textAlign: "center" }}>
         Ro&apos;yxatdan o&apos;tishda o&apos;zingiz tanlagan login va paroldan foydalaning.
-        <br />Hisobingiz yo&apos;qmi? <Link href="/register">Ro&apos;yxatdan o&apos;ting</Link>.
+        <br />Hisobingiz yo&apos;qmi? <Link href="/#lead">Qo&apos;ng&apos;iroq so&apos;rang</Link>.
         <br />Parol esdan chiqdimi? <a href="https://t.me/tech_jadid" target="_blank" rel="noreferrer">Yordam uchun yozing</a>.
       </p>
     </>

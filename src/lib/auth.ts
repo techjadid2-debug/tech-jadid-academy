@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isDemoModeEnabled, isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -22,7 +22,7 @@ export interface AppUser {
   name: string;
   email: string;
   phone: string;
-  role: "student" | "instructor" | "admin";
+  role: "student" | "instructor" | "admin" | "seller";
 }
 
 const USER_COOKIE = "tj_user";
@@ -41,7 +41,8 @@ export function emailForLogin(login: string): string {
 // Render davomida keshlanadi — har sahifada bir necha marta chaqirilsa ham
 // Supabase sessiya so'rovi bir marta bajariladi.
 export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
-  return isSupabaseConfigured ? getSupabaseUser() : getDemoUser();
+  if (isSupabaseConfigured) return getSupabaseUser();
+  return isDemoModeEnabled ? getDemoUser() : null;
 });
 
 // ---- REAL rejim ----------------------------------------------------------
@@ -60,7 +61,12 @@ async function getSupabaseUser(): Promise<AppUser | null> {
     name: profile.full_name || user.email || "O'quvchi",
     email: user.email ?? "",
     phone: profile.phone ?? "",
-    role: profile.role === "admin" || profile.role === "instructor" ? profile.role : "student",
+    role:
+      profile.role === "admin" ||
+      profile.role === "instructor" ||
+      profile.role === "seller"
+        ? profile.role
+        : "student",
   };
 }
 
@@ -101,6 +107,7 @@ async function getDemoUser(): Promise<AppUser | null> {
 
 /** Server Action ichida chaqiriladi — demo foydalanuvchini o'rnatadi. */
 export async function setDemoUser(user: AppUser): Promise<void> {
+  if (!isDemoModeEnabled) throw new Error("Demo rejim yoqilmagan.");
   const store = await cookies();
   store.set(USER_COOKIE, JSON.stringify(user), {
     httpOnly: true,
@@ -127,3 +134,5 @@ export function makeUserId(seed: string): string {
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
   return "u_" + Math.abs(h).toString(36);
 }
+
+export { isSeller } from "@/lib/roles";

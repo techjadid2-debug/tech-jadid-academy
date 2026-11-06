@@ -6,12 +6,13 @@ import { getCurrentUser } from "@/lib/auth";
 import { emailForLogin, normalizeLogin } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCourseAsync } from "@/lib/course";
-import { grantAccess, unlockFullAccess } from "@/lib/access";
 import { getCourseId } from "@/lib/supabase/db";
 import type { LessonContentBlock, LessonRow, PricingKind } from "@/lib/types";
 import { decideRequest } from "@/lib/enrollment-requests";
 import { reviewSubmission } from "@/lib/homework";
 import { isTeacher } from "@/lib/cohorts";
+import { parseLessonContent } from "@/lib/lesson-content";
+import { recordManualAccessPayment } from "@/lib/payments/db";
 
 // ============================================================================
 // Admin CMS server action'lari. Har biri clientga ishonmaydi:
@@ -61,8 +62,9 @@ function readAccountForm(formData: FormData) {
 /** Chek Telegram'da tekshirilgach yangi o'quvchi va uning kirishini yaratadi. */
 export async function createStudentAccount(formData: FormData) {
   const admin = await requireAdminDb();
+  const actor = await getCurrentUser();
   const input = readAccountForm(formData);
-  if (!input) redirect("/admin?error=account-invalid#oquvchi");
+  if (!input || !actor) redirect("/admin?error=account-invalid#oquvchi");
 
   const course = await getCourseAsync(input.courseSlug);
   const option = course?.pricing.find((p) => p.kind === input.kind);
@@ -86,6 +88,7 @@ export async function createStudentAccount(formData: FormData) {
     full_name: input.fullName,
     phone: input.contact || null,
     role: "student",
+    created_by: actor.id,
   });
   if (profileError) {
     await admin.auth.admin.deleteUser(userId);
@@ -93,22 +96,16 @@ export async function createStudentAccount(formData: FormData) {
     redirect("/admin?error=account-duplicate#oquvchi");
   }
 
-  try {
-    await grantAccess(userId, input.courseSlug, input.kind);
-    const { error: paymentError } = await admin.from("payments").insert({
-      user_id: userId,
-      course_id: courseId,
-      amount_uzs: option.priceUzs,
-      provider: "manual",
-      kind: input.kind,
-      step: 1,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-      raw: { approved_in_admin: true, contact: input.contact || null },
-    });
-    if (paymentError) throw paymentError;
-  } catch (error) {
-    console.error("[admin] create student entitlement failed", error);
+  const paymentId = await recordManualAccessPayment({
+    userId,
+    courseId,
+    amountUzs: option.priceUzs,
+    kind: input.kind,
+    step: 1,
+    actorId: actor.id,
+    raw: { approved_in_admin: true, contact: input.contact || null },
+  });
+  if (!paymentId) {
     await admin.from("profiles").delete().eq("id", userId);
     await admin.auth.admin.deleteUser(userId);
     redirect("/admin?error=account-save#oquvchi");
@@ -121,6 +118,7 @@ export async function createStudentAccount(formData: FormData) {
 /** Mavjud qisman yozilgan o'quvchining ikkinchi to'lovini tasdiqlaydi. */
 export async function approveSecondInstallment(formData: FormData) {
   const admin = await requireAdminDb();
+  const actor = await getCurrentUser();
   const login = normalizeLogin(String(formData.get("login") ?? ""));
   const courseSlug = String(formData.get("courseSlug") ?? "");
   if (!login || !courseSlug) redirect("/admin?error=account-invalid#oquvchi");
@@ -129,22 +127,18 @@ export async function approveSecondInstallment(formData: FormData) {
   const course = await getCourseAsync(courseSlug);
   const option = course?.pricing.find((p) => p.kind === "installment2");
   const courseId = await getCourseId(courseSlug);
-  if (!profile || !course || !option || !courseId) redirect("/admin?error=account-invalid#oquvchi");
+  if (!profile || !course || !option || !courseId || !actor) redirect("/admin?error=account-invalid#oquvchi");
 
-  await unlockFullAccess(profile.id, courseSlug);
-  const { error } = await admin.from("payments").insert({
-    user_id: profile.id,
-    course_id: courseId,
-    amount_uzs: option.priceUzs,
-    provider: "manual",
+  const paymentId = await recordManualAccessPayment({
+    userId: profile.id,
+    courseId,
+    amountUzs: option.priceUzs,
     kind: "installment2",
     step: 2,
-    status: "paid",
-    paid_at: new Date().toISOString(),
+    actorId: actor.id,
     raw: { approved_in_admin: true },
   });
-  if (error) {
-    console.error("[admin] approve second installment failed", error);
+  if (!paymentId) {
     redirect("/admin?error=account-save#oquvchi");
   }
   revalidateContent();
@@ -154,6 +148,7 @@ export async function approveSecondInstallment(formData: FormData) {
 /** Oyma-oy to'lov tasdiqlanganda mavjud o'quvchining kirishini yana 30 kunga uzaytiradi. */
 export async function renewMonthlyAccess(formData: FormData) {
   const admin = await requireAdminDb();
+  const actor = await getCurrentUser();
   const login = normalizeLogin(String(formData.get("login") ?? ""));
   const courseSlug = String(formData.get("courseSlug") ?? "");
   if (!login || !courseSlug) redirect("/admin?error=account-invalid#oquvchi");
@@ -162,15 +157,18 @@ export async function renewMonthlyAccess(formData: FormData) {
   const course = await getCourseAsync(courseSlug);
   const option = course?.pricing.find((p) => p.kind === "monthly");
   const courseId = await getCourseId(courseSlug);
-  if (!profile || !option || !courseId) redirect("/admin?error=account-invalid#oquvchi");
+  if (!profile || !option || !courseId || !actor) redirect("/admin?error=account-invalid#oquvchi");
 
-  await grantAccess(profile.id, courseSlug, "monthly");
-  const { error } = await admin.from("payments").insert({
-    user_id: profile.id, course_id: courseId, amount_uzs: option.priceUzs, provider: "manual",
-    kind: "monthly", step: 1, status: "paid", paid_at: new Date().toISOString(), raw: { approved_in_admin: true, renewal: true },
+  const paymentId = await recordManualAccessPayment({
+    userId: profile.id,
+    courseId,
+    amountUzs: option.priceUzs,
+    kind: "monthly",
+    step: 1,
+    actorId: actor.id,
+    raw: { approved_in_admin: true, renewal: true },
   });
-  if (error) {
-    console.error("[admin] renew monthly access failed", error);
+  if (!paymentId) {
     redirect("/admin?error=account-save#oquvchi");
   }
   revalidateContent();
@@ -205,6 +203,56 @@ export async function setInstructorRole(formData: FormData) {
   if (error) redirect("/admin?error=account-save#oquvchi");
   revalidatePath("/teacher");
   redirect("/admin?saved=role#oquvchi");
+}
+
+/** Administrator yangi seller hisobini yaratadi. */
+export async function createSellerAccount(formData: FormData) {
+  const admin = await requireAdminDb();
+  const actor = await getCurrentUser();
+  const login = normalizeLogin(String(formData.get("login") ?? ""));
+  const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("fullName") ?? "").trim().slice(0, 120);
+  if (!actor || !login || fullName.length < 2 || password.length < 8) {
+    redirect("/admin?error=account-invalid#sotuvchilar");
+  }
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email: emailForLogin(login),
+    password,
+    email_confirm: true,
+  });
+  if (error || !data.user) redirect("/admin?error=account-duplicate#sotuvchilar");
+  const { error: profileError } = await admin.from("profiles").insert({
+    id: data.user.id,
+    login,
+    full_name: fullName,
+    role: "seller",
+    created_by: actor.id,
+  });
+  if (profileError) {
+    await admin.auth.admin.deleteUser(data.user.id);
+    redirect("/admin?error=account-save#sotuvchilar");
+  }
+  revalidatePath("/admin");
+  redirect("/admin?saved=seller#sotuvchilar");
+}
+
+/** Faqat seller rolidagi hisob parolini yangilaydi. */
+export async function resetSellerPassword(formData: FormData) {
+  const admin = await requireAdminDb();
+  const sellerId = String(formData.get("sellerId") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!sellerId || password.length < 8) redirect("/admin?error=account-invalid#sotuvchilar");
+  const { data: seller } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", sellerId)
+    .eq("role", "seller")
+    .maybeSingle();
+  if (!seller) redirect("/admin?error=account-invalid#sotuvchilar");
+  const { error } = await admin.auth.admin.updateUserById(sellerId, { password });
+  if (error) redirect("/admin?error=account-save#sotuvchilar");
+  redirect("/admin?saved=seller-password#sotuvchilar");
 }
 
 // ---- Ro'yxatdan o'tish arizalari --------------------------------------------
@@ -301,16 +349,7 @@ function rowsFromForm(formData: FormData): LessonRow[] {
 
 function contentFromForm(formData: FormData): LessonContentBlock[] | null {
   const raw = String(formData.get("contentJson") ?? "[]").trim();
-  if (raw.length > 100_000) return null;
-  try {
-    const value = JSON.parse(raw) as unknown;
-    if (!Array.isArray(value)) return null;
-    const allowed = new Set(["paragraph", "heading", "image", "callout", "steps", "prompt", "task"]);
-    if (!value.every((block) => block && typeof block === "object" && allowed.has(String((block as { type?: unknown }).type)))) return null;
-    return value as LessonContentBlock[];
-  } catch {
-    return null;
-  }
+  return parseLessonContent(raw);
 }
 
 export async function updateLesson(formData: FormData) {

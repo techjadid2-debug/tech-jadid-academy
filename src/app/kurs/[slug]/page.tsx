@@ -9,7 +9,6 @@ import { getCourseAsync } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveEnrollment, canAccessLesson } from "@/lib/access";
 import { getRequestStatus } from "@/lib/enrollment-requests";
-import { startCheckout, requestEnrollment } from "./actions";
 import { getPendingPaymentForUser } from "@/lib/payments/db";
 import { getPublicCohortSummary } from "@/lib/cohorts";
 
@@ -40,8 +39,8 @@ export default async function CoursePage({
   return (
     <>
       <SiteNav
-        cta={user ? { href: "/dashboard", label: "Kabinet" } : { href: `/register?course=${slug}`, label: "Ro'yxatdan o'tish" }}
-        secondaryCta={!user ? { href: "/login", label: "Kirish" } : undefined}
+        cta={user ? { href: user.role === "seller" ? "/sotuvchi" : "/dashboard", label: "Kabinet" } : { href: "/login", label: "Kirish" }}
+        secondaryCta={!user ? { href: `/?course=${slug}#lead`, label: "Qo'ng'iroq so'rash" } : undefined}
       />
       <main className="shell">
         {/* Sarlavha */}
@@ -62,8 +61,8 @@ export default async function CoursePage({
           <b>{cohort ? `Ochiq guruh: ${cohort.title}` : "Yangi guruh sanasi kutilmoqda"}</b>
           <p className="hint">
             {cohort
-              ? `${formatCohortStart(cohort.startsAt)} boshlanadi. Jadval va tarif arizadan keyin tasdiqlanadi.`
-              : "Aniq kun va vaqt e'lon qilinmagan. Ariza qoldiring; jadval va tarifni bilmasdan turib to'lov qilishingiz shart emas."}
+              ? `${formatCohortStart(cohort.startsAt)} boshlanadi. Jadval va tarif sotuvchi bilan kelishiladi.`
+              : "Aniq kun va vaqt e'lon qilinmagan. Qo'ng'iroq so'rang; jadval va tarifni bilmasdan turib to'lov qilishingiz shart emas."}
           </p>
         </div>
 
@@ -116,15 +115,9 @@ export default async function CoursePage({
                       : "Qolgan darslarni ochish uchun ikkinchi to'lovni amalga oshiring — summa ustoz bilan kelishiladi.";
                   })()}
                 </p>
-                <form action={startCheckout}>
-                  <input type="hidden" name="slug" value={course.slug} />
-                  <input type="hidden" name="kind" value="installment2" />
-                  <input type="hidden" name="provider" value="manual" />
-                  <input type="hidden" name="step" value="2" />
-                  <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                    Qolganini ochish →
-                  </button>
-                </form>
+                <Link href={`/?course=${course.slug}#lead`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                  Qo&apos;ng&apos;iroq so&apos;rash →
+                </Link>
                 <Link
                   href={`/learn/${course.slug}/${firstLesson.order}`}
                   className="btn btn-ghost"
@@ -161,10 +154,10 @@ export default async function CoursePage({
                   <>
                     <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
                     <p className="hint" style={{ marginBottom: 18 }}>
-                      Ro&apos;yxatdan o&apos;ting — ustoz aloqaga chiqadi, guruh va to&apos;lovni kelishadi. 1-dars hoziroq bepul.
+                      Raqamingizni qoldiring. Sotuvchi qo&apos;ng&apos;iroq qilib jadval va tarifni tushuntiradi. 1-dars hoziroq bepul.
                     </p>
-                    <Link href={`/register?course=${course.slug}`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                      Ro&apos;yxatdan o&apos;tish →
+                    <Link href={`/?course=${course.slug}#lead`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      Qo&apos;ng&apos;iroq so&apos;rash →
                     </Link>
                     <Link
                       href={`/learn/${course.slug}/${firstLesson.order}`}
@@ -200,27 +193,21 @@ export default async function CoursePage({
                   <>
                     <span className="badge badge-red" style={{ marginBottom: 12 }}>Rad etilgan</span>
                     <p className="hint" style={{ marginBottom: 18 }}>
-                      Arizangiz hozircha tasdiqlanmadi. Qayta murojaat qiling yoki ustoz bilan bog&apos;laning.
+                      Arizangiz hozircha tasdiqlanmadi. Qayta qo&apos;ng&apos;iroq so&apos;rang.
                     </p>
-                    <form action={requestEnrollment}>
-                      <input type="hidden" name="slug" value={course.slug} />
-                      <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                        Qayta ariza yuborish
-                      </button>
-                    </form>
+                    <Link href={`/?course=${course.slug}#lead`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      Qo&apos;ng&apos;iroq so&apos;rash
+                    </Link>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kursga yozilish</div>
+                    <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6 }}>Kurs bo&apos;yicha qo&apos;ng&apos;iroq</div>
                     <p className="hint" style={{ marginBottom: 18 }}>
-                      Ariza yuboring — ustoz siz bilan bog&apos;lanib guruh va to&apos;lovni kelishadi.
+                      Raqamingizni qoldiring. Sotuvchi savollaringizga javob beradi va to&apos;lovdan keyin kursni ochadi.
                     </p>
-                    <form action={requestEnrollment}>
-                      <input type="hidden" name="slug" value={course.slug} />
-                      <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                        Ariza yuborish →
-                      </button>
-                    </form>
+                    <Link href={`/?course=${course.slug}#lead`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                      Qo&apos;ng&apos;iroq so&apos;rash →
+                    </Link>
                   </>
                 )}
               </div>

@@ -17,6 +17,7 @@ import { getPendingPaymentForUser } from "@/lib/payments/db";
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/dashboard");
+  if (user.role === "seller") redirect("/sotuvchi");
 
   const enrollments = await getEnrollments(user.id);
   const enrolledSlugs = enrollments.map((e) => e.courseSlug);
@@ -86,6 +87,9 @@ export default async function DashboardPage() {
             )}
             {user.role === "admin" && (
               <Link href="/admin" className="btn btn-ghost">Admin panel</Link>
+            )}
+            {user.role === "admin" && (
+              <Link href="/sotuvchi" className="btn btn-ghost">Sotuvchi paneli</Link>
             )}
             <form action={logout}>
               <button type="submit" className="btn btn-ghost">Chiqish</button>
